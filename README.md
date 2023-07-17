@@ -6,7 +6,7 @@ This is a utility tool for Unity that allows you to place objects in a sequence 
 Simple road mesh generation  
 <img src="https://github.com/TLabAltoh/TLabCurveTool/assets/121733943/935c52bc-fdbc-490a-853f-721499457407" width="512">
 
-Sequential placement of arbitrary meshes  
+Sequential placement of arbitrary meshes (Textured cubes)  
 <img src="https://github.com/TLabAltoh/TLabCurveTool/assets/121733943/57b94f8f-b0bb-406c-be08-61e89a251d3d" width="512">
 
 ## Operating Environment
