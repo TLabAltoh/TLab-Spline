@@ -1,4 +1,4 @@
-# TLabCurveEditor
+# TLabCurveTool
 This is a utility tool for Unity that allows you to place objects in a sequence like Blender's curves.  
 [I made it based on this tutorial.](https://www.youtube.com/playlist?list=PLFt_AvWsXl0d8aDaovNztYf6iTChHzrHP)
 
