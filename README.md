@@ -25,7 +25,12 @@ git submodule add https://github.com/TLabAltoh/TLabCurveEditor.git
 ### How To Use
 Create an arbitrary game object and attach this script to it  
 <img src="https://github.com/TLabAltoh/TLabCurveTool/assets/121733943/58c86d2f-a105-4fe7-848d-ed691cea75fb" width="256">
-
+  
+```
+A: Add segment  
+D: Deletion of segment  
+S: Insert segment
+```
 
 ### TODO
 - Intersection generation
