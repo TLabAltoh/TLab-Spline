@@ -3,11 +3,11 @@ This is a utility tool for Unity that allows you to place objects in a sequence 
 [I made it based on this tutorial.](https://www.youtube.com/playlist?list=PLFt_AvWsXl0d8aDaovNztYf6iTChHzrHP)
 
 ## Screenshot  
-Simple road mesh generation  
-<img src="https://github.com/TLabAltoh/TLabCurveTool/assets/121733943/6237fdb5-43b2-4092-98c1-3bf537e49c1a" width="512">
+Placement along the curve of Sphere  
+<img src="https://github.com/TLabAltoh/TLabCurveTool/assets/121733943/1df20cb9-6c31-4d9a-9449-53f109080c3f" width="512">
 
 Sequential placement of arbitrary meshes (Textured cubes)  
-<img src="https://github.com/TLabAltoh/TLabCurveTool/assets/121733943/0f5e706d-405c-4816-a583-ece6c2393308" width="512">
+<img src="https://github.com/TLabAltoh/TLabCurveTool/assets/121733943/3ef3c274-2104-4c07-90ff-135247e16785" width="512">
 
 ## Operating Environment
 - Unity: 2022.3.3f1  
@@ -24,7 +24,7 @@ git submodule add https://github.com/TLabAltoh/TLabCurveEditor.git
 
 ### How To Use
 Create an arbitrary game object and attach this script to it  
-<img src="https://github.com/TLabAltoh/TLabCurveTool/assets/121733943/9afa2ba7-bb44-48c9-b912-0faf14c54d79" width="512">
+<img src="https://github.com/TLabAltoh/TLabCurveTool/assets/121733943/9cb91658-31f0-45f5-a42d-e08e0742ba89" width="512">
 
 ```
 A: Add segment  
