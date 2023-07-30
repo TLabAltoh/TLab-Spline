@@ -9,32 +9,28 @@ using UnityEditor;
 [RequireComponent(typeof(MeshCollider))]
 public class EasyRoad3D : MonoBehaviour
 {
-    [SerializeField] public float roadWidth = 1.0f;
     [SerializeField] public bool autoUpdate;
-    [SerializeField] public bool arrayMode;
-    [SerializeField] public float tiling = 1.0f;
 
     [Header("Curve Settings")]
     [SerializeField] public bool zUp = true;
-    [SerializeField, Range(0.5f, 15.0f)] public float spacing = 1.0f;
 
     [Header("Array Settings")]
-    [SerializeField] public Vector2 offset = new Vector2(1.0f, 1.0f);
+    [SerializeField] public float offset = 1.0f;
+    [SerializeField] public Vector3 scale = new Vector3(1.0f, 1.0f, 1.0f);
     [SerializeField] private MeshFilter arrayTarget;
 
     public void UpdateRoad()
     {
+        Vector3 boundsSize = arrayTarget.sharedMesh.bounds.size;
+
         // Mesh
         PathCreator creator = GetComponent<PathCreator>();
         Path path = creator.path;
-        Vector3[] points = path.CalculateEvenlySpacedPoints(spacing);
-        Mesh roadMesh = arrayMode ? CreateArrayMesh(points, path.IsClosed) : CreateRoadMesh(points, path.IsClosed);
+        Vector3[] points = path.CalculateEvenlySpacedPoints(boundsSize.z * scale.z * offset);
+        Mesh roadMesh = CreateArrayMesh(points, path.IsClosed);
         GetComponent<MeshFilter>().sharedMesh = roadMesh;
         GetComponent<MeshCollider>().sharedMesh = roadMesh;
-
-        // Texture repeat
-        int textureRepeat = Mathf.RoundToInt(tiling * points.Length * spacing * 0.5f);
-        GetComponent<MeshRenderer>().sharedMaterial.mainTextureScale = new Vector2(1, textureRepeat);
+        GetComponent<MeshRenderer>().sharedMaterial.mainTextureScale = new Vector2(1, 1);
 
 #if UNITY_EDITOR
         EditorUtility.SetDirty(creator);
@@ -43,6 +39,9 @@ public class EasyRoad3D : MonoBehaviour
 
     private (Vector3[], Vector2[], int[]) GetRoadMeshInfo(Vector3[] points, bool isClosed)
     {
+        // bounds size
+        Vector3 boundsSize = arrayTarget.sharedMesh.bounds.size;
+
         Vector3[] verts = new Vector3[points.Length * 2];
         Vector2[] uvs = new Vector2[verts.Length];
 
@@ -69,7 +68,7 @@ public class EasyRoad3D : MonoBehaviour
             // Get z-up vector
             Vector3 left = new Vector3(-forward.z, zUp ? 0.0f : forward.y, forward.x);
 
-            Vector3 offset = left * roadWidth * 0.5f;
+            Vector3 offset = left * boundsSize.x * 0.5f * scale.x;
             verts[vertIndex + 0] = points[i] + offset;
             verts[vertIndex + 1] = points[i] - offset;
 
@@ -128,10 +127,10 @@ public class EasyRoad3D : MonoBehaviour
 
         float maxTop = boundsCenter.y + boundsSize.y * 0.5f;
         float maxBottom = boundsCenter.y - boundsSize.y * 0.5f;
-        float maxRight = boundsCenter.x + boundsSize.x * 0.5f * offset.x;
-        float maxLeft = boundsCenter.x - boundsSize.x * 0.5f * offset.x;
-        float maxForward = boundsCenter.z + boundsSize.z * 0.5f * offset.y;
-        float maxBackward = boundsCenter.z - boundsSize.z * 0.5f * offset.y;
+        float maxRight = boundsCenter.x + boundsSize.x * 0.5f;
+        float maxLeft = boundsCenter.x - boundsSize.x * 0.5f;
+        float maxForward = boundsCenter.z + boundsSize.z * 0.5f * offset;
+        float maxBackward = boundsCenter.z - boundsSize.z * 0.5f * offset;
 
         Vector3[] boundsUVs = new Vector3[srcVerts.Length];
 
@@ -175,7 +174,7 @@ public class EasyRoad3D : MonoBehaviour
                     Vector3 posInPlane = lerpLeft * boundsUVs[j].x + lerpRight * (1 - boundsUVs[j].x);
                     Vector3 zOffset = Vector3.Cross((leftForward - rightBackward), (leftBackward - rightBackward)).normalized * srcVerts[j].y;
 
-                    verts[i * srcVerts.Length + j] = posInPlane + zOffset;
+                    verts[i * srcVerts.Length + j] = posInPlane + zOffset * scale.y;
                     uvs[i * srcVerts.Length + j] = srcUvs[j];
                 }
             }
