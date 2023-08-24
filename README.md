@@ -13,14 +13,7 @@ Sequential placement of arbitrary meshes (Textured cubes)
 - Unity: 2022.3.3f1  
 
 ### Installing
-Clone the repository to any directory under Assets in the Unity project that will use the assets with the following command  
-```
-git clone https://github.com/TLabAltoh/TLabCurveEditor.git
-```
-If you are adding to an existing git project, use the following command instead
-```
-git submodule add https://github.com/TLabAltoh/TLabCurveEditor.git
-```
+Clone the repository or place the downloaded package under any Unity project
 
 ### How To Use
 Create an arbitrary game object and attach this script to it  
