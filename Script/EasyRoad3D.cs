@@ -102,19 +102,6 @@ public class EasyRoad3D : MonoBehaviour
         return (verts, uvs, tris);
     }
 
-    private Mesh CreateRoadMesh(Vector3[] points, bool isClosed)
-    {
-        (Vector3[] verts, Vector2[] uvs, int[] tris) roadInfo = GetRoadMeshInfo(points, isClosed);
-
-        Mesh mesh = new Mesh();
-        mesh.vertices = roadInfo.verts;
-        mesh.triangles = roadInfo.tris;
-        mesh.uv = roadInfo.uvs;
-        mesh.RecalculateNormals();
-
-        return mesh;
-    }
-
     public Mesh CreateArrayMesh(Vector3[] points, bool isClosed)
     {
         Vector3[] srcVerts = arrayTarget.sharedMesh.vertices;
@@ -129,8 +116,8 @@ public class EasyRoad3D : MonoBehaviour
         float maxBottom = boundsCenter.y - boundsSize.y * 0.5f;
         float maxRight = boundsCenter.x + boundsSize.x * 0.5f;
         float maxLeft = boundsCenter.x - boundsSize.x * 0.5f;
-        float maxForward = boundsCenter.z + boundsSize.z * 0.5f * offset;
-        float maxBackward = boundsCenter.z - boundsSize.z * 0.5f * offset;
+        float maxForward = boundsCenter.z + boundsSize.z * offset * 0.5f;
+        float maxBackward = boundsCenter.z - boundsSize.z * offset * 0.5f;
 
         Vector3[] boundsUVs = new Vector3[srcVerts.Length];
 
@@ -174,7 +161,7 @@ public class EasyRoad3D : MonoBehaviour
                     Vector3 posInPlane = lerpLeft * boundsUVs[j].x + lerpRight * (1 - boundsUVs[j].x);
                     Vector3 zOffset = Vector3.Cross((leftForward - rightBackward), (leftBackward - rightBackward)).normalized * srcVerts[j].y;
 
-                    verts[i * srcVerts.Length + j] = posInPlane + zOffset * scale.y;
+                    verts[i * srcVerts.Length + j] = posInPlane + zOffset * scale.y * (maxTop - maxBottom);
                     uvs[i * srcVerts.Length + j] = srcUvs[j];
                 }
             }
