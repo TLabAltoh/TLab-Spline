@@ -10,7 +10,7 @@ Sequential placement of arbitrary meshes (Textured cubes)
 <img src="https://github.com/TLabAltoh/TLabCurveTool/assets/121733943/3ef3c274-2104-4c07-90ff-135247e16785" width="512">
 
 ## Operating Environment
-- Unity: 2022.3.3f1  
+- Unity: 2022.3.3f1 --> 2022.3.11f1  
 
 ### Installing
 Clone the repository or place the downloaded package under any Unity project
