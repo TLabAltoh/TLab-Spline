@@ -28,6 +28,7 @@ Create an arbitrary game object and attach this script to it
 
 ### TODO
 - Intersection generation
+- Fit terrain height map to path
 
 ### Reference
 - [Sebastian Lague](https://www.youtube.com/playlist?list=PLFt_AvWsXl0d8aDaovNztYf6iTChHzrHP)
