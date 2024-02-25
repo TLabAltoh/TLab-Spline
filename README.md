@@ -1,5 +1,6 @@
 # TLabCurveTool
 This is a utility tool for Unity that allows you to place objects in a sequence like Blender's curves.  
+It can also be used as a simple curve.  
 [I made it based on this tutorial.](https://www.youtube.com/playlist?list=PLFt_AvWsXl0d8aDaovNztYf6iTChHzrHP)
 
 ## Screenshot  
@@ -19,11 +20,11 @@ Clone the repository or place the downloaded package under any Unity project
 Create an arbitrary game object and attach this script to it  
 <img src="https://github.com/TLabAltoh/TLabCurveTool/assets/121733943/9cb91658-31f0-45f5-a42d-e08e0742ba89" width="512">
 
-```
-A: Add segment  
-D: Deletion of segment  
-S: Insert segment
-```
+| Key | Action |
+| --- | --- |
+| A | Add segment |
+| D | Deletion of segment |
+| S | Insert segment |
 
 ### TODO
 - Intersection generation
