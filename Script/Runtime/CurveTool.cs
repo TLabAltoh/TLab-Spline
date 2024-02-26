@@ -31,13 +31,17 @@ namespace TLab.CurveTool
         [SerializeField] private float m_offset = 1.0f;
         [SerializeField] private Vector3 m_scale = new Vector3(1.0f, 1.0f, 1.0f);
         [SerializeField] private MeshFilter m_element;
+        [SerializeField] private bool m_fitCurve = false;
         [SerializeField] private bool m_collision = false;
+        [SerializeField] private Vector2[] m_range = new Vector2[1];
 
         private Vector3[] m_points;
 
         public bool autoUpdate { get => m_autoUpdate; set => m_autoUpdate = value; }
 
         public Vector3[] points { get => m_points; }
+
+        public Vector2[] range { get => m_range; }
 
 
         public void UpdateRoad()
@@ -68,6 +72,18 @@ namespace TLab.CurveTool
 #if UNITY_EDITOR
             EditorUtility.SetDirty(creator);
 #endif
+        }
+
+        /// <summary>
+        /// Export the current mesh as a separate GameObject
+        /// </summary>
+        public void Export()
+        {
+            GameObject go = new GameObject();
+            go.AddComponent<MeshFilter>().sharedMesh = GetComponent<MeshFilter>().sharedMesh;
+            go.AddComponent<MeshCollider>().sharedMesh = GetComponent<MeshCollider>().sharedMesh;
+            go.AddComponent<MeshRenderer>().sharedMaterial = GetComponent<MeshRenderer>().sharedMaterial;
+            go.GetComponent<MeshRenderer>().sharedMaterial.mainTextureScale = new Vector2(1, 1);
         }
 
         /// <summary>
@@ -147,6 +163,9 @@ namespace TLab.CurveTool
 
         public Mesh CreateArrayMesh(Vector3[] points, bool isClosed)
         {
+            CombineInstance[] combine = new CombineInstance[m_range.Length];
+            MeshFilter meshFilter = GetComponent<MeshFilter>();
+
             Vector3[] srcVerts = m_element.sharedMesh.vertices;
             Vector2[] srcUvs = m_element.sharedMesh.uv;
             int[] srcTris = m_element.sharedMesh.triangles;
@@ -175,59 +194,73 @@ namespace TLab.CurveTool
 
             Vector3[] roadPlane = GetQuadMeshInfo(points, isClosed).Item1;
 
-            int arrayNum = isClosed ? points.Length : (points.Length - 1);
-            Vector3[] verts = new Vector3[arrayNum * srcVerts.Length];
-            Vector2[] uvs = new Vector2[verts.Length];
-            int[] tris = new int[arrayNum * srcTris.Length];
-
-            for (int i = 0; i < points.Length; i++)
+            for (int r = 0; r < m_range.Length; r++)
             {
-                if (i > 0 && i < points.Length - 1 || isClosed)
+                int start = (int)(m_range[r].x * m_points.Length);
+                int end = (int)(m_range[r].y * m_points.Length);
+                int length = end - start + 1;
+
+                int arrayNum = isClosed ? length : (length - 1);
+
+                Vector3[] verts = new Vector3[arrayNum * srcVerts.Length];
+                Vector2[] uvs = new Vector2[verts.Length];
+                int[] tris = new int[arrayNum * srcTris.Length];
+
+                for (int p = start, i = 0; (p < end) && (i < length); p++, i++)
                 {
-                    /*
-                     *     0 -----・-----  1
-                     *    
-                     *    
-                     *    -2 -----・----- -1
-                     */
-
-                    Vector3 leftForward = roadPlane[i * 2];
-                    Vector3 rightForward = roadPlane[(i * 2 + 1) % roadPlane.Length];
-                    Vector3 leftBackward = roadPlane[(i * 2 - 2 + roadPlane.Length) % roadPlane.Length];
-                    Vector3 rightBackward = roadPlane[(i * 2 - 1 + roadPlane.Length) % roadPlane.Length];
-
-                    for (int j = 0; j < srcVerts.Length; j++)
+                    if ((p > 0 && p < points.Length - 1) && (i > 0 && i < length) || isClosed)
                     {
-                        Vector3 lerpLeft = leftForward * boundsUVs[j].z + leftBackward * (1 - boundsUVs[j].z);
-                        Vector3 lerpRight = rightForward * boundsUVs[j].z + rightBackward * (1 - boundsUVs[j].z);
+                        /*
+                         *     0 -----・-----  1
+                         *    
+                         *    
+                         *    -2 -----・----- -1
+                         */
 
-                        Vector3 posInPlane = lerpLeft * boundsUVs[j].x + lerpRight * (1 - boundsUVs[j].x);
-                        Vector3 zOffset = Vector3.Cross((leftForward - rightBackward), (leftBackward - rightBackward)).normalized * srcVerts[j].y;
+                        Vector3 leftForward = roadPlane[p * 2];
+                        Vector3 rightForward = roadPlane[(p * 2 + 1) % roadPlane.Length];
+                        Vector3 leftBackward = roadPlane[(p * 2 - 2 + roadPlane.Length) % roadPlane.Length];
+                        Vector3 rightBackward = roadPlane[(p * 2 - 1 + roadPlane.Length) % roadPlane.Length];
 
-                        verts[i * srcVerts.Length + j] = posInPlane + zOffset * m_scale.y * (maxTop - maxBottom);
-                        uvs[i * srcVerts.Length + j] = srcUvs[j];
+                        for (int j = 0; j < srcVerts.Length; j++)
+                        {
+                            Vector3 lerpLeft = leftForward * boundsUVs[j].z + leftBackward * (1 - boundsUVs[j].z);
+                            Vector3 lerpRight = rightForward * boundsUVs[j].z + rightBackward * (1 - boundsUVs[j].z);
+
+                            Vector3 posInPlane = lerpLeft * boundsUVs[j].x + lerpRight * (1 - boundsUVs[j].x);
+                            Vector3 zOffset = Vector3.Cross((leftForward - rightBackward), (leftBackward - rightBackward)).normalized * srcVerts[j].y;
+
+                            verts[i * srcVerts.Length + j] = posInPlane + zOffset * m_scale.y * (maxTop - maxBottom);
+                            uvs[i * srcVerts.Length + j] = srcUvs[j];
+                        }
                     }
                 }
-            }
 
-            for (int i = 0; i < points.Length; i++)
-            {
-                if (i > 0 && i < points.Length - 1 || isClosed)
+                for (int i = 0; i < length; i++)
                 {
-                    for (int j = 0; j < srcTris.Length; j++)
+                    if ((i > 0 && i < length - 1) || isClosed)
                     {
-                        tris[i * srcTris.Length + j] = i * srcVerts.Length + srcTris[j];
+                        for (int j = 0; j < srcTris.Length; j++)
+                        {
+                            tris[i * srcTris.Length + j] = i * srcVerts.Length + srcTris[j];
+                        }
                     }
                 }
+
+                Mesh mesh = new Mesh();
+                mesh.vertices = verts;
+                mesh.triangles = tris;
+                mesh.uv = uvs;
+                mesh.RecalculateNormals();
+
+                combine[r].mesh = mesh;
+                combine[r].transform = meshFilter.transform.localToWorldMatrix;
             }
 
-            Mesh mesh = new Mesh();
-            mesh.vertices = verts;
-            mesh.triangles = tris;
-            mesh.uv = uvs;
-            mesh.RecalculateNormals();
+            Mesh combinedMesh = new Mesh();
+            combinedMesh.CombineMeshes(combine);
 
-            return mesh;
+            return combinedMesh;
         }
 
         public void ArrayMesh(Vector3[] points, bool isClosed)

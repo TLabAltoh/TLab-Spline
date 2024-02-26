@@ -5,13 +5,16 @@ It can also be used as a simple curve.
 
 ## Screenshot  
 Placement along the curve of Sphere  
-<img src="https://github.com/TLabAltoh/TLabCurveTool/assets/121733943/1df20cb9-6c31-4d9a-9449-53f109080c3f" width="512">
+<img src="Media/sphere.png" width="512">
 
 Sequential placement of arbitrary meshes (Textured cubes)  
-<img src="https://github.com/TLabAltoh/TLabCurveTool/assets/121733943/3ef3c274-2104-4c07-90ff-135247e16785" width="512">
+<img src="Media/cube.png" width="512">
+
+Duplicate an object by specifying a range
+<img src="Media/split.png" width="512">
 
 Use as a simple curve  
-<img src="https://github.com/TLabAltoh/TLabCurveTool/assets/121733943/d4eea46f-beff-4202-b190-26c633f4275e" width="512">
+<img src="Media/curve.png" width="512">
 
 ## Operating Environment
 - Unity: 2022.3.3f1 --> 2022.3.11f1  
@@ -21,7 +24,7 @@ Clone the repository or place the downloaded package under any Unity project
 
 ### How To Use
 Create an arbitrary game object and attach this script to it  
-<img src="https://github.com/TLabAltoh/TLabCurveTool/assets/121733943/d2224d34-be56-498b-bf64-dde7eb01b1d7" width="512">
+<img src="Media/inspector" width="512">
 
 | Key | Action |
 | --- | --- |
