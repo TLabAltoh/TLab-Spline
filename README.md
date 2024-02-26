@@ -24,7 +24,7 @@ Clone the repository or place the downloaded package under any Unity project
 
 ### How To Use
 Create an arbitrary game object and attach this script to it  
-<img src="Media/inspector" width="512">
+<img src="Media/inspector.png" width="512">
 
 | Key | Action |
 | --- | --- |
