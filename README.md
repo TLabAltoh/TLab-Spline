@@ -10,7 +10,7 @@ Placement along the curve of Sphere
 Sequential placement of arbitrary meshes (Textured cubes)  
 <img src="Media/cube.png" width="512">
 
-Duplicate an object by specifying a range
+Duplicate an object by specifying a range  
 <img src="Media/split.png" width="512">
 
 Use as a simple curve  
