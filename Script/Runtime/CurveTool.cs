@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using UnityEngine;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -14,7 +15,8 @@ namespace TLab.CurveTool
         private enum CurveMode
         {
             CURVE,
-            ARRAY
+            ARRAY,
+            TERRAIN
         };
 
         [Header("Update Option")]
@@ -31,11 +33,25 @@ namespace TLab.CurveTool
         [SerializeField] private float m_offset = 1.0f;
         [SerializeField] private Vector3 m_scale = new Vector3(1.0f, 1.0f, 1.0f);
         [SerializeField] private MeshFilter m_element;
-        [SerializeField] private bool m_fitCurve = false;
         [SerializeField] private bool m_collision = false;
         [SerializeField] private Vector2[] m_range = new Vector2[1];
 
+        [Header("Terrain Group")]
+        [SerializeField] private Terrain[] m_terrains;
+        [SerializeField] private bool m_fitCurve = false;
+        [SerializeField] private AnimationCurve m_fitRatio;
+        [SerializeField] private ComputeShader m_terrainFit;
+
+        private Material m_mat; // for gl.
+
+        private GraphicsBuffer m_csTerrainBuffer;
+        private GraphicsBuffer m_csPlaneBuffer;
+
         private Vector3[] m_points;
+
+        private static int DISPATCH_GROUP_SIZE = Shader.PropertyToID("_DispatchGroupSize");
+        private static int PLANES = Shader.PropertyToID("_Planes");
+        private static int TERRAIN_PIXELS = Shader.PropertyToID("_TerrainPixels");
 
         public bool autoUpdate { get => m_autoUpdate; set => m_autoUpdate = value; }
 
@@ -43,6 +59,29 @@ namespace TLab.CurveTool
 
         public Vector2[] range { get => m_range; }
 
+        struct TerrainPixel
+        {
+            public Vector3 position;
+
+            public Vector2 uv;
+        };
+
+        struct Triangle
+        {
+            public Vector3 vert0;
+            public Vector3 vert1;
+            public Vector3 vert2;
+
+            public Vector2 uv0;
+            public Vector2 uv1;
+            public Vector2 uv2;
+        };
+
+        struct Plane
+        {
+            public Triangle triangle0;
+            public Triangle triangle1;
+        };
 
         public void UpdateRoad()
         {
@@ -54,9 +93,11 @@ namespace TLab.CurveTool
             switch (m_curveMode)
             {
                 case CurveMode.CURVE:
-                    path.CalculateEvenlySpacedPoints(out m_points, m_space);
-                    GetComponent<MeshFilter>().sharedMesh = null;
-                    GetComponent<MeshCollider>().sharedMesh = null;
+                    if (path.CalculateEvenlySpacedPoints(out m_points, m_space))
+                    {
+                        GetComponent<MeshFilter>().sharedMesh = null;
+                        GetComponent<MeshCollider>().sharedMesh = null;
+                    }
                     break;
                 case CurveMode.ARRAY:
                     if (path.CalculateEvenlySpacedPoints(out m_points, boundsSize.z * m_scale.z * m_offset))
@@ -67,11 +108,178 @@ namespace TLab.CurveTool
                         GetComponent<MeshRenderer>().sharedMaterial.mainTextureScale = new Vector2(1, 1);
                     }
                     break;
+                case CurveMode.TERRAIN:
+                    if (path.CalculateEvenlySpacedPoints(out m_points, m_space))
+                    {
+                        if (!GetQuadMeshInfo(m_points, path.IsClosed, out Vector3[] verts, out Vector2[] uvs, out int[] tris))
+                        {
+                            break;
+                        }
+
+                        Plane[] planes = new Plane[tris.Length / 6];
+
+                        for (int i = 0; i < planes.Length; i++)
+                        {
+                            int offset = i * 6;
+
+                            planes[i] = new Plane
+                            {
+                                triangle0 = new Triangle
+                                {
+                                    vert0 = transform.TransformPoint(verts[tris[offset + 0]]),
+                                    vert1 = transform.TransformPoint(verts[tris[offset + 1]]),
+                                    vert2 = transform.TransformPoint(verts[tris[offset + 2]]),
+
+                                    uv0 = uvs[tris[offset + 0]],
+                                    uv1 = uvs[tris[offset + 1]],
+                                    uv2 = uvs[tris[offset + 2]]
+                                },
+
+                                triangle1 = new Triangle
+                                {
+                                    vert0 = transform.TransformPoint(verts[tris[offset + 3]]),
+                                    vert1 = transform.TransformPoint(verts[tris[offset + 4]]),
+                                    vert2 = transform.TransformPoint(verts[tris[offset + 5]]),
+
+                                    uv0 = uvs[tris[offset + 3]],
+                                    uv1 = uvs[tris[offset + 4]],
+                                    uv2 = uvs[tris[offset + 5]]
+                                },
+                            };
+                        }
+
+                        CSUtil.GraphicsBuffer(ref m_csPlaneBuffer, GraphicsBuffer.Target.Structured, planes.Length, Marshal.SizeOf<Plane>());
+                        m_csPlaneBuffer.SetData(planes);
+
+                        m_terrainFit.SetBuffer(0, PLANES, m_csPlaneBuffer);
+
+                        for (int i = 0; i < m_terrains.Length; i++)
+                        {
+                            Terrain terrain = m_terrains[i];
+
+                            TerrainData data = terrain.terrainData;
+
+                            int resolution = data.heightmapResolution;
+
+                            float[,] heights = data.GetHeights(0, 0, resolution, resolution);
+
+                            TerrainPixel[] terrainPixel = new TerrainPixel[resolution * resolution];
+
+                            float xSpace = data.size.x / (resolution - 1);
+                            float zSpace = data.size.z / (resolution - 1);
+
+                            for (int row = 0; row < resolution; row++)
+                            {
+                                for (int col = 0; col < resolution; col++)
+                                {
+                                    int offset = col * resolution + row;
+                                    terrainPixel[offset].position.x = terrain.transform.position.x + xSpace * row;
+                                    terrainPixel[offset].position.z = terrain.transform.position.z + zSpace * col;
+                                    terrainPixel[offset].position.y = heights[col, row] * data.size.y + terrain.transform.position.y;
+
+                                    // uv is not determined until the compute shader is passed.
+                                }
+                            }
+
+                            CSUtil.GraphicsBuffer(ref m_csTerrainBuffer, GraphicsBuffer.Target.Structured, terrainPixel.Length, Marshal.SizeOf<TerrainPixel>());
+                            m_csTerrainBuffer.SetData(terrainPixel);
+
+                            m_terrainFit.SetBuffer(0, TERRAIN_PIXELS, m_csTerrainBuffer);
+
+                            CSUtil.GetDispatchGroupSize(m_terrainFit, 0,
+                                resolution, resolution, 1,
+                                out int groupSizeX, out int groupSizeY, out int groupSizeZ);
+
+                            m_terrainFit.SetInts(DISPATCH_GROUP_SIZE, groupSizeX, groupSizeY, groupSizeZ);
+
+                            CSUtil.Dispatch(m_terrainFit, 0, groupSizeX, groupSizeY, groupSizeZ);
+
+                            m_csTerrainBuffer.GetData(terrainPixel);
+
+                            for (int row = 0; row < resolution; row++)
+                            {
+                                for (int col = 0; col < resolution; col++)
+                                {
+                                    int offset = col * resolution + row;
+
+                                    float height0 = heights[col, row];
+                                    float height1 = terrainPixel[offset].position.y;
+
+                                    float lerpRatio = m_fitRatio.Evaluate(Mathf.Abs(terrainPixel[offset].uv.x % 1f - 0.5f));
+                                    float lerpHeight = height1 * lerpRatio + height0 * (1f - lerpRatio);
+
+                                    heights[col, row] = Mathf.Clamp01((lerpHeight - terrain.transform.position.y) / data.size.y);
+                                }
+                            }
+
+                            data.SetHeights(0, 0, heights);
+
+                            CSUtil.DisposeBuffer(ref m_csTerrainBuffer);
+                        }
+
+                        CSUtil.DisposeBuffer(ref m_csPlaneBuffer);
+                    }
+                    break;
             }
 
 #if UNITY_EDITOR
             EditorUtility.SetDirty(creator);
 #endif
+        }
+
+        private void OnDrawGizmos()
+        {
+            if (m_mat == null)
+            {
+                m_mat = new Material(Shader.Find("Unlit/Color"));
+            }
+
+            m_mat.SetColor("_Color", Color.green);
+
+            PathCreator creator = GetComponent<PathCreator>();
+            Path path = creator.path;
+
+            if (creator.displayPlane)
+            {
+                if (path.CalculateEvenlySpacedPoints(out m_points, m_space))
+                {
+                    if (!GetQuadMeshInfo(m_points, path.IsClosed, out Vector3[] verts, out Vector2[] uvs, out int[] tris))
+                    {
+                        return;
+                    }
+
+                    m_mat.SetPass(0);
+
+                    GL.PushMatrix();
+
+                    for (int i = 0; i < tris.Length; i += 3)
+                    {
+                        Vector3[] corners = new Vector3[3];
+                        corners[0] = verts[tris[i + 0]];
+                        corners[1] = verts[tris[i + 1]];
+                        corners[2] = verts[tris[i + 2]];
+
+                        transform.TransformPoints(corners, corners);
+
+                        GL.Begin(GL.LINES);
+                        GL.Vertex3(corners[0].x, corners[0].y, corners[0].z);
+                        GL.Vertex3(corners[1].x, corners[1].y, corners[1].z);
+                        GL.End();
+
+                        GL.Begin(GL.LINES);
+                        GL.Vertex3(corners[1].x, corners[1].y, corners[1].z);
+                        GL.Vertex3(corners[2].x, corners[2].y, corners[2].z);
+                        GL.End();
+
+                        GL.Begin(GL.LINES);
+                        GL.Vertex3(corners[2].x, corners[2].y, corners[2].z);
+                        GL.Vertex3(corners[0].x, corners[0].y, corners[0].z);
+                        GL.End();
+                    }
+
+                    GL.PopMatrix();
+                }
+            }
         }
 
         /// <summary>
@@ -80,6 +288,10 @@ namespace TLab.CurveTool
         public void Export()
         {
             GameObject go = new GameObject();
+            go.transform.localPosition = transform.localPosition;
+            go.transform.localRotation = transform.localRotation;
+            go.transform.localScale = transform.localScale;
+            go.transform.parent = transform.parent;
             go.AddComponent<MeshFilter>().sharedMesh = GetComponent<MeshFilter>().sharedMesh;
             go.AddComponent<MeshCollider>().sharedMesh = GetComponent<MeshCollider>().sharedMesh;
             go.AddComponent<MeshRenderer>().sharedMaterial = GetComponent<MeshRenderer>().sharedMaterial;
@@ -92,16 +304,18 @@ namespace TLab.CurveTool
         /// <param name="points"></param>
         /// <param name="isClosed"></param>
         /// <returns></returns>
-        private (Vector3[], Vector2[], int[]) GetQuadMeshInfo(Vector3[] points, bool isClosed)
+        private bool GetQuadMeshInfo(
+            Vector3[] points, bool isClosed,
+            out Vector3[] verts, out Vector2[] uvs, out int[] tris)
         {
             // bounds size
             Vector3 boundsSize = m_element.sharedMesh.bounds.size;
 
-            Vector3[] verts = new Vector3[points.Length * 2];
-            Vector2[] uvs = new Vector2[verts.Length];
+            verts = new Vector3[points.Length * 2];
+            uvs = new Vector2[verts.Length];
 
             int numTris = (points.Length - 1) + (isClosed ? 2 : 0);
-            int[] tris = new int[2 * numTris * 3];
+            tris = new int[2 * numTris * 3];
 
             int vertIndex = 0;
             int triIndex = 0;
@@ -158,13 +372,12 @@ namespace TLab.CurveTool
                 triIndex += 6;
             }
 
-            return (verts, uvs, tris);
+            return true;
         }
 
         public Mesh CreateArrayMesh(Vector3[] points, bool isClosed)
         {
             CombineInstance[] combine = new CombineInstance[m_range.Length];
-            MeshFilter meshFilter = GetComponent<MeshFilter>();
 
             Vector3[] srcVerts = m_element.sharedMesh.vertices;
             Vector2[] srcUvs = m_element.sharedMesh.uv;
@@ -192,7 +405,7 @@ namespace TLab.CurveTool
                 boundsUVs[i].z = (srcVert.z - maxBackward) / (maxForward - maxBackward);
             }
 
-            Vector3[] roadPlane = GetQuadMeshInfo(points, isClosed).Item1;
+            GetQuadMeshInfo(points, isClosed, out Vector3[] planeMesh, out Vector2[] planeUvs, out int[] planeTris);
 
             for (int r = 0; r < m_range.Length; r++)
             {
@@ -217,10 +430,10 @@ namespace TLab.CurveTool
                          *    -2 -----E----- -1
                          */
 
-                        Vector3 leftForward = roadPlane[p * 2];
-                        Vector3 rightForward = roadPlane[(p * 2 + 1) % roadPlane.Length];
-                        Vector3 leftBackward = roadPlane[(p * 2 - 2 + roadPlane.Length) % roadPlane.Length];
-                        Vector3 rightBackward = roadPlane[(p * 2 - 1 + roadPlane.Length) % roadPlane.Length];
+                        Vector3 leftForward = planeMesh[p * 2];
+                        Vector3 rightForward = planeMesh[(p * 2 + 1) % planeMesh.Length];
+                        Vector3 leftBackward = planeMesh[(p * 2 - 2 + planeMesh.Length) % planeMesh.Length];
+                        Vector3 rightBackward = planeMesh[(p * 2 - 1 + planeMesh.Length) % planeMesh.Length];
 
                         for (int j = 0; j < srcVerts.Length; j++)
                         {
@@ -254,7 +467,7 @@ namespace TLab.CurveTool
                 mesh.RecalculateNormals();
 
                 combine[r].mesh = mesh;
-                combine[r].transform = meshFilter.transform.localToWorldMatrix;
+                combine[r].transform = Matrix4x4.identity;
             }
 
             Mesh combinedMesh = new Mesh();

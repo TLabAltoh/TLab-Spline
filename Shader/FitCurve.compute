@@ -1,0 +1,149 @@
+#pragma kernel CSMain
+
+struct TerrainPixel {
+    float3 position;
+
+    float2 uv;
+};
+
+struct Triangle {
+    float3 vert0;
+    float3 vert1;
+    float3 vert2;
+
+    float2 uv0;
+    float2 uv1;
+    float2 uv2;
+};
+
+struct Plane {
+    Triangle triangle0;
+    Triangle triangle1;
+};
+
+uint3 _DispatchGroupSize;
+
+RWStructuredBuffer<Plane> _Planes;
+RWStructuredBuffer<TerrainPixel> _TerrainPixels;
+
+float2 SubVector(float2 a, float2 b) {
+    float2 ret;
+    ret.x = a.x - b.x;
+    ret.y = a.y - b.y;
+    return ret;
+}
+
+float2 GetXZ(float3 vec) {
+    float2 ret;
+    ret.x = vec.x;
+    ret.y = vec.z;
+    return ret;
+}
+
+bool CheckTriangleInOut(Triangle t, float3 p) {
+    float2 vert0XZ = GetXZ(t.vert0);
+    float2 vert1XZ = GetXZ(t.vert1);
+    float2 vert2XZ = GetXZ(t.vert2);
+    float2 pXZ = GetXZ(p);
+
+    float2 ab = SubVector(vert1XZ, vert0XZ);
+    float2 bp = SubVector(pXZ, vert1XZ);
+
+    float2 bc = SubVector(vert2XZ, vert1XZ);
+    float2 cp = SubVector(pXZ, vert2XZ);
+
+    float2 ca = SubVector(vert0XZ, vert2XZ);
+    float2 ap = SubVector(pXZ, vert0XZ);
+
+    float c1 = ab.x * bp.y - ab.y * bp.x;
+    float c2 = bc.x * cp.y - bc.y * cp.x;
+    float c3 = ca.x * ap.y - ca.y * ap.x;
+
+    if ((c1 > 0 && c2 > 0 && c3 > 0) || (c1 < 0 && c2 < 0 && c3 < 0)) {
+        return true;
+    }
+
+    return false;
+}
+
+inline float abs(float a) {
+    return sqrt(a * a);
+}
+
+float GetArea(float2 a, float2 b, float2 c) {
+    float2 d0 = a - b;
+    float2 d1 = c - b;
+    return 0.5 * (d0.x * d1.y - d1.x * d0.y);
+}
+
+float3 LerpTrianglePosition(Triangle t, float3 p) {
+    float2 vert0XZ = GetXZ(t.vert0);
+    float2 vert1XZ = GetXZ(t.vert1);
+    float2 vert2XZ = GetXZ(t.vert2);
+    float2 pXZ = GetXZ(p);
+
+    float s = GetArea(vert2XZ, vert1XZ, vert0XZ);
+    float s1 = GetArea(vert0XZ, vert2XZ, pXZ);
+    float s2 = GetArea(vert1XZ, vert0XZ, pXZ);
+
+    float u = s1 / s;
+    float v = s2 / s;
+
+    float3 lerp = (1 - u - v) * t.vert0 + u * t.vert1 + v * t.vert2;
+
+    return lerp;
+}
+
+float2 LerpTriangleUv(Triangle t, float3 p) {
+    float2 vert0XZ = GetXZ(t.vert0);
+    float2 vert1XZ = GetXZ(t.vert1);
+    float2 vert2XZ = GetXZ(t.vert2);
+    float2 pXZ = GetXZ(p);
+
+    float s = GetArea(vert2XZ, vert1XZ, vert0XZ);
+    float s1 = GetArea(vert0XZ, vert2XZ, pXZ);
+    float s2 = GetArea(vert1XZ, vert0XZ, pXZ);
+
+    float u = s1 / s;
+    float v = s2 / s;
+
+    float2 lerp = (1 - u - v) * t.uv0 + u * t.uv1 + v * t.uv2;
+
+    return lerp;
+}
+
+#define THREAD_SIZE 8
+
+[numthreads(THREAD_SIZE, THREAD_SIZE, 1)]
+void CSMain(uint3 id : SV_DispatchThreadID) {
+    uint numPlanes, planeStride;
+    _Planes.GetDimensions(numPlanes, planeStride);
+
+    uint numPixels, pixelStride;
+    _TerrainPixels.GetDimensions(numPixels, pixelStride);
+
+    uint idx =
+        id.z * (_DispatchGroupSize.x * THREAD_SIZE * _DispatchGroupSize.y * THREAD_SIZE) +
+        id.y * (_DispatchGroupSize.x * THREAD_SIZE) + id.x;
+
+    if (idx >= numPixels) {
+        return;
+    }
+
+    TerrainPixel terrainPixel = _TerrainPixels[idx];
+    float3 position = terrainPixel.position;
+
+    for (uint i = 0; i < numPlanes; i++) {
+        Plane plane = _Planes[i];
+
+        if (CheckTriangleInOut(plane.triangle0, position)) {
+            _TerrainPixels[idx].position = LerpTrianglePosition(plane.triangle0, position);
+            _TerrainPixels[idx].uv = LerpTriangleUv(plane.triangle0, position);
+        }
+
+        if (CheckTriangleInOut(plane.triangle1, position)) {
+            _TerrainPixels[idx].position = LerpTrianglePosition(plane.triangle1, position);
+            _TerrainPixels[idx].uv = LerpTriangleUv(plane.triangle1, position);
+        }
+    }
+}

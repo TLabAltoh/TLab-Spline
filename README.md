@@ -16,6 +16,9 @@ Duplicate an object by specifying a range
 Use as a simple curve  
 <img src="Media/curve.png" width="512">
 
+Fit Terrain height to curve
+<img src="Media/fit_terrain.png" width="512">
+
 ## Operating Environment
 - Unity: 2022.3.3f1 --> 2022.3.11f1  
 
@@ -34,7 +37,6 @@ Create an arbitrary game object and attach this script to it
 
 ### TODO
 - Intersection generation
-- Fit terrain height map to path
 
 ### Reference
 - [Sebastian Lague](https://www.youtube.com/playlist?list=PLFt_AvWsXl0d8aDaovNztYf6iTChHzrHP)

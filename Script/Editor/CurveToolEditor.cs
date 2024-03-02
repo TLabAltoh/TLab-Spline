@@ -19,13 +19,19 @@ namespace TLab.CurveTool.Editor
 
             DrawProperty("m_autoUpdate");
             DrawProperty("m_curveMode");
+
             DrawProperty("m_zUp");
             DrawProperty("m_space");
+
             DrawProperty("m_offset");
             DrawProperty("m_scale");
             DrawProperty("m_element");
-            DrawProperty("m_fitCurve");
             DrawProperty("m_collision");
+
+            DrawProperty("m_terrains");
+            DrawProperty("m_fitCurve");
+            DrawProperty("m_fitRatio");
+            DrawProperty("m_terrainFit");
 
             DrawMinMaxProperty("m_range", "Range");
 
