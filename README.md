@@ -16,7 +16,7 @@ Duplicate an object by specifying a range
 Use as a simple curve  
 <img src="Media/curve.png" width="512">
 
-Fit Terrain height to curve
+Fit Terrain height to curve  
 <img src="Media/fit_terrain.png" width="512">
 
 ## Operating Environment
