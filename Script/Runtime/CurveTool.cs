@@ -38,7 +38,6 @@ namespace TLab.CurveTool
 
         [Header("Terrain Group")]
         [SerializeField] private Terrain[] m_terrains;
-        [SerializeField] private bool m_fitCurve = false;
         [SerializeField] private AnimationCurve m_fitRatio;
         [SerializeField] private ComputeShader m_terrainFit;
 

@@ -29,11 +29,10 @@ namespace TLab.CurveTool.Editor
             DrawProperty("m_collision");
 
             DrawProperty("m_terrains");
-            DrawProperty("m_fitCurve");
             DrawProperty("m_fitRatio");
             DrawProperty("m_terrainFit");
 
-            DrawMinMaxProperty("m_range", "Range");
+            DrawMinMaxProperty("m_range", "Split Range");
 
             EditorGUILayout.Space();
 
@@ -87,6 +86,15 @@ namespace TLab.CurveTool.Editor
             }
 
             EditorGUILayout.EndHorizontal();
+
+            m_ranges.onAddCallback = (list) =>
+            {
+                prop.InsertArrayElementAtIndex(list.index);
+
+                SerializedProperty element = prop.GetArrayElementAtIndex(list.index);
+
+                element.vector2Value = new Vector2(0f, 1f);
+            };
 
             m_ranges.drawElementCallback = (rect, index, isActive, isFocused) =>
             {
