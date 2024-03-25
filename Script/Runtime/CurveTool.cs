@@ -3,6 +3,7 @@ using UnityEngine;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
+using TLab.MeshEngine;
 
 namespace TLab.CurveTool
 {
@@ -32,7 +33,7 @@ namespace TLab.CurveTool
         [Header("Array Settings")]
         [SerializeField] private float m_offset = 1.0f;
         [SerializeField] private Vector3 m_scale = new Vector3(1.0f, 1.0f, 1.0f);
-        [SerializeField] private MeshFilter m_element;
+        [SerializeField] private MeshElement m_element;
         [SerializeField] private bool m_collision = false;
         [SerializeField] private Vector2[] m_range = new Vector2[1];
 
@@ -82,12 +83,19 @@ namespace TLab.CurveTool
             public Triangle triangle1;
         };
 
+        public void CopyPath(Path path)
+        {
+            var creator = GetComponent<PathCreator>();
+            creator.path = path;
+        }
+
         public void UpdateRoad()
         {
-            Vector3 boundsSize = m_element.sharedMesh.bounds.size;
+            m_element.GetBounds(out var bounds);
+            var boundsSize = bounds.size;
 
-            PathCreator creator = GetComponent<PathCreator>();
-            Path path = creator.path;
+            var creator = GetComponent<PathCreator>();
+            var path = creator.path;
 
             switch (m_curveMode)
             {
@@ -101,9 +109,9 @@ namespace TLab.CurveTool
                 case CurveMode.ARRAY:
                     if (path.CalculateEvenlySpacedPoints(out m_points, boundsSize.z * m_scale.z * m_offset))
                     {
-                        Mesh roadMesh = CreateArrayMesh(m_points, path.IsClosed);
-                        GetComponent<MeshFilter>().sharedMesh = roadMesh;
-                        GetComponent<MeshCollider>().sharedMesh = m_collision ? roadMesh : null;
+                        var mesh = CreateArrayMesh(m_points, path.IsClosed);
+                        GetComponent<MeshFilter>().sharedMesh = mesh;
+                        GetComponent<MeshCollider>().sharedMesh = m_collision ? mesh : null;
                         GetComponent<MeshRenderer>().sharedMaterial.mainTextureScale = new Vector2(1, 1);
                     }
                     break;
@@ -115,11 +123,11 @@ namespace TLab.CurveTool
                             break;
                         }
 
-                        Plane[] planes = new Plane[tris.Length / 6];
+                        var planes = new Plane[tris.Length / 6];
 
                         for (int i = 0; i < planes.Length; i++)
                         {
-                            int offset = i * 6;
+                            var offset = i * 6;
 
                             planes[i] = new Plane
                             {
@@ -154,24 +162,24 @@ namespace TLab.CurveTool
 
                         for (int i = 0; i < m_terrains.Length; i++)
                         {
-                            Terrain terrain = m_terrains[i];
+                            var terrain = m_terrains[i];
 
-                            TerrainData data = terrain.terrainData;
+                            var data = terrain.terrainData;
 
-                            int resolution = data.heightmapResolution;
+                            var resolution = data.heightmapResolution;
 
-                            float[,] heights = data.GetHeights(0, 0, resolution, resolution);
+                            var heights = data.GetHeights(0, 0, resolution, resolution);
 
-                            TerrainPixel[] terrainPixel = new TerrainPixel[resolution * resolution];
+                            var terrainPixel = new TerrainPixel[resolution * resolution];
 
-                            float xSpace = data.size.x / (resolution - 1);
-                            float zSpace = data.size.z / (resolution - 1);
+                            var xSpace = data.size.x / (resolution - 1);
+                            var zSpace = data.size.z / (resolution - 1);
 
                             for (int row = 0; row < resolution; row++)
                             {
                                 for (int col = 0; col < resolution; col++)
                                 {
-                                    int offset = col * resolution + row;
+                                    var offset = col * resolution + row;
                                     terrainPixel[offset].position.x = terrain.transform.position.x + xSpace * row;
                                     terrainPixel[offset].position.z = terrain.transform.position.z + zSpace * col;
                                     terrainPixel[offset].position.y = heights[col, row] * data.size.y + terrain.transform.position.y;
@@ -199,13 +207,13 @@ namespace TLab.CurveTool
                             {
                                 for (int col = 0; col < resolution; col++)
                                 {
-                                    int offset = col * resolution + row;
+                                    var offset = col * resolution + row;
 
-                                    float height0 = heights[col, row];
-                                    float height1 = terrainPixel[offset].position.y;
+                                    var height0 = heights[col, row];
+                                    var height1 = terrainPixel[offset].position.y;
 
-                                    float lerpRatio = m_fitRatio.Evaluate(Mathf.Abs(terrainPixel[offset].uv.x % 1f - 0.5f));
-                                    float lerpHeight = height1 * lerpRatio + height0 * (1f - lerpRatio);
+                                    var lerpRatio = m_fitRatio.Evaluate(Mathf.Abs(terrainPixel[offset].uv.x % 1f - 0.5f));
+                                    var lerpHeight = height1 * lerpRatio + height0 * (1f - lerpRatio);
 
                                     heights[col, row] = Mathf.Clamp01((lerpHeight - terrain.transform.position.y) / data.size.y);
                                 }
@@ -235,8 +243,8 @@ namespace TLab.CurveTool
 
             m_mat.SetColor("_Color", Color.green);
 
-            PathCreator creator = GetComponent<PathCreator>();
-            Path path = creator.path;
+            var creator = GetComponent<PathCreator>();
+            var path = creator.path;
 
             if (creator.displayPlane)
             {
@@ -253,7 +261,7 @@ namespace TLab.CurveTool
 
                     for (int i = 0; i < tris.Length; i += 3)
                     {
-                        Vector3[] corners = new Vector3[3];
+                        var corners = new Vector3[3];
                         corners[0] = verts[tris[i + 0]];
                         corners[1] = verts[tris[i + 1]];
                         corners[2] = verts[tris[i + 2]];
@@ -286,7 +294,7 @@ namespace TLab.CurveTool
         /// </summary>
         public void Export()
         {
-            GameObject go = new GameObject();
+            var go = new GameObject();
             go.transform.localPosition = transform.localPosition;
             go.transform.localRotation = transform.localRotation;
             go.transform.localScale = transform.localScale;
@@ -307,8 +315,8 @@ namespace TLab.CurveTool
             Vector3[] points, bool isClosed,
             out Vector3[] verts, out Vector2[] uvs, out int[] tris)
         {
-            // bounds size
-            Vector3 boundsSize = m_element.sharedMesh.bounds.size;
+            m_element.GetBounds(out var bounds);
+            var boundsSize = bounds.size;
 
             verts = new Vector3[points.Length * 2];
             uvs = new Vector2[verts.Length];
@@ -323,14 +331,12 @@ namespace TLab.CurveTool
             {
                 Vector3 forward = Vector3.zero;
 
-                // Neighboring forward
-                if (i < points.Length - 1 || isClosed)
+                if (i < points.Length - 1 || isClosed)  // Neighboring forward
                 {
                     forward += points[(i + 1) % points.Length] - points[i];
                 }
 
-                // Neighboring backward
-                if (i > 0 || isClosed)
+                if (i > 0 || isClosed)  // Neighboring backward
                 {
                     forward += points[i] - points[(i - 1 + points.Length) % points.Length];
                 }
@@ -338,9 +344,9 @@ namespace TLab.CurveTool
                 forward.Normalize();
 
                 // Get z-up vector
-                Vector3 left = new Vector3(-forward.z, m_zUp ? 0.0f : forward.y, forward.x);
+                var left = new Vector3(-forward.z, m_zUp ? 0.0f : forward.y, forward.x);
 
-                Vector3 m_offset = left * boundsSize.x * 0.5f * m_scale.x;
+                var m_offset = left * boundsSize.x * 0.5f * m_scale.x;
                 verts[vertIndex + 0] = points[i] + m_offset;
                 verts[vertIndex + 1] = points[i] - m_offset;
 
@@ -362,8 +368,8 @@ namespace TLab.CurveTool
                     tris[triIndex + 5] = (vertIndex + 3) % verts.Length;
                 }
 
-                float completinPercent = i / (float)points.Length;
-                float v = 1 - Mathf.Abs(2 * completinPercent - 1);
+                var completinPercent = i / (float)points.Length;
+                var v = 1 - Mathf.Abs(2 * completinPercent - 1);
                 uvs[vertIndex + 0] = new Vector2(0, v);
                 uvs[vertIndex + 1] = new Vector2(1, v);
 
@@ -376,47 +382,45 @@ namespace TLab.CurveTool
 
         public Mesh CreateArrayMesh(Vector3[] points, bool isClosed)
         {
-            CombineInstance[] combine = new CombineInstance[m_range.Length];
+            var combine = new CombineInstance[m_range.Length];
 
-            Vector3[] srcVerts = m_element.sharedMesh.vertices;
-            Vector2[] srcUvs = m_element.sharedMesh.uv;
-            int[] srcTris = m_element.sharedMesh.triangles;
+            m_element.GetMesh(out var srcMesh);
+            m_element.GetBounds(out var bounds);
 
-            // Get bound box
-            Vector3 boundsCenter = m_element.sharedMesh.bounds.center;
-            Vector3 boundsSize = m_element.sharedMesh.bounds.size;
+            var srcVerts = srcMesh.vertices;
+            var srcUvs = srcMesh.uv;
+            var srcTris = srcMesh.triangles;
 
-            float maxTop = boundsCenter.y + boundsSize.y * 0.5f;
-            float maxBottom = boundsCenter.y - boundsSize.y * 0.5f;
-            float maxRight = boundsCenter.x + boundsSize.x * 0.5f;
-            float maxLeft = boundsCenter.x - boundsSize.x * 0.5f;
-            float maxForward = boundsCenter.z + boundsSize.z * m_offset * 0.5f;
-            float maxBackward = boundsCenter.z - boundsSize.z * m_offset * 0.5f;
+            var maxYP = bounds.max.y;
+            var maxYN = bounds.min.y;
+            var maxXP = bounds.max.x;
+            var maxXN = bounds.min.x;
+            var maxZP = bounds.max.z * m_offset;
+            var maxZN = bounds.min.z * m_offset;
 
-            Vector3[] boundsUVs = new Vector3[srcVerts.Length];
+            var boundsUVs = new Vector3[srcVerts.Length];
 
-            // Get vertex uv
-            for (int i = 0; i < srcVerts.Length; i++)
+            for (int i = 0; i < srcVerts.Length; i++)   // Get vertex uv
             {
                 Vector3 srcVert = srcVerts[i];
-                boundsUVs[i].x = (srcVert.x - maxLeft) / (maxRight - maxLeft);
-                boundsUVs[i].y = (srcVert.y - maxBottom) / (maxTop - maxBottom);
-                boundsUVs[i].z = (srcVert.z - maxBackward) / (maxForward - maxBackward);
+                boundsUVs[i].x = (srcVert.x - maxXN) / (maxXP - maxXN);
+                boundsUVs[i].y = (srcVert.y - maxYN) / (maxYP - maxYN);
+                boundsUVs[i].z = (srcVert.z - maxZN) / (maxZP - maxZN);
             }
 
-            GetQuadMeshInfo(points, isClosed, out Vector3[] planeMesh, out Vector2[] planeUvs, out int[] planeTris);
+            GetQuadMeshInfo(points, isClosed, out var planeMesh, out var planeUvs, out var planeTris);
 
             for (int r = 0; r < m_range.Length; r++)
             {
-                int start = (int)(m_range[r].x * m_points.Length);
-                int end = (int)(m_range[r].y * m_points.Length);
-                int length = end - start + 1;
+                var start = (int)(m_range[r].x * m_points.Length);
+                var end = (int)(m_range[r].y * m_points.Length);
+                var length = end - start + 1;
 
-                int arrayNum = isClosed ? length : (length - 1);
+                var arrayNum = isClosed ? length : (length - 1);
 
-                Vector3[] verts = new Vector3[arrayNum * srcVerts.Length];
-                Vector2[] uvs = new Vector2[verts.Length];
-                int[] tris = new int[arrayNum * srcTris.Length];
+                var verts = new Vector3[arrayNum * srcVerts.Length];
+                var uvs = new Vector2[verts.Length];
+                var tris = new int[arrayNum * srcTris.Length];
 
                 for (int p = start, i = 0; (p < end) && (i < length); p++, i++)
                 {
@@ -429,20 +433,20 @@ namespace TLab.CurveTool
                          *    -2 -----E----- -1
                          */
 
-                        Vector3 leftForward = planeMesh[p * 2];
-                        Vector3 rightForward = planeMesh[(p * 2 + 1) % planeMesh.Length];
-                        Vector3 leftBackward = planeMesh[(p * 2 - 2 + planeMesh.Length) % planeMesh.Length];
-                        Vector3 rightBackward = planeMesh[(p * 2 - 1 + planeMesh.Length) % planeMesh.Length];
+                        var LF = planeMesh[p * 2];
+                        var RF = planeMesh[(p * 2 + 1) % planeMesh.Length];
+                        var LB = planeMesh[(p * 2 - 2 + planeMesh.Length) % planeMesh.Length];
+                        var RB = planeMesh[(p * 2 - 1 + planeMesh.Length) % planeMesh.Length];
 
                         for (int j = 0; j < srcVerts.Length; j++)
                         {
-                            Vector3 lerpLeft = leftForward * boundsUVs[j].z + leftBackward * (1 - boundsUVs[j].z);
-                            Vector3 lerpRight = rightForward * boundsUVs[j].z + rightBackward * (1 - boundsUVs[j].z);
+                            var lerpL = LF * boundsUVs[j].z + LB * (1 - boundsUVs[j].z);
+                            var lerpR = RF * boundsUVs[j].z + RB * (1 - boundsUVs[j].z);
 
-                            Vector3 posInPlane = lerpLeft * boundsUVs[j].x + lerpRight * (1 - boundsUVs[j].x);
-                            Vector3 zOffset = Vector3.Cross((leftForward - rightBackward), (leftBackward - rightBackward)).normalized * srcVerts[j].y;
+                            var posInPlane = lerpL * boundsUVs[j].x + lerpR * (1 - boundsUVs[j].x);
+                            var zOffset = Vector3.Cross((LF - RB), (LB - RB)).normalized * srcVerts[j].y;
 
-                            verts[i * srcVerts.Length + j] = posInPlane + zOffset * m_scale.y * (maxTop - maxBottom);
+                            verts[i * srcVerts.Length + j] = posInPlane + zOffset * m_scale.y * (maxYP - maxYN);
                             uvs[i * srcVerts.Length + j] = srcUvs[j];
                         }
                     }
@@ -469,7 +473,7 @@ namespace TLab.CurveTool
                 combine[r].transform = Matrix4x4.identity;
             }
 
-            Mesh combinedMesh = new Mesh();
+            var combinedMesh = new Mesh();
             combinedMesh.CombineMeshes(combine);
 
             return combinedMesh;

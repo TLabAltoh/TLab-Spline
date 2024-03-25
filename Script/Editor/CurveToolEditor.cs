@@ -13,6 +13,8 @@ namespace TLab.CurveTool.Editor
 
         private ReorderableList m_ranges = null;
 
+        private static Path m_path;
+
         public override void OnInspectorGUI()
         {
             serializedObject.Update();
@@ -40,14 +42,32 @@ namespace TLab.CurveTool.Editor
 
             EditorGUILayout.BeginHorizontal();
 
-            if (GUILayout.Button("Update"))
+            if (GUILayout.Button("Update", GUILayout.Width(Screen.width / 3)))
             {
                 m_instance.UpdateRoad();
             }
 
-            if (GUILayout.Button("Export"))
+            if (GUILayout.Button("Export", GUILayout.Width(Screen.width / 3)))
             {
                 m_instance.Export();
+            }
+
+            EditorGUILayout.EndHorizontal();
+
+            EditorGUILayout.BeginHorizontal();
+
+            if (GUILayout.Button("Copy Path", GUILayout.Width(Screen.width / 3)))
+            {
+                var creator = m_instance.GetComponent<PathCreator>();
+
+                m_path = creator.path;
+            }
+
+            if (GUILayout.Button("Paste Path", GUILayout.Width(Screen.width / 3)))
+            {
+                m_instance.CopyPath(m_path);
+
+                EditorUtility.SetDirty(m_instance);
             }
 
             EditorGUILayout.EndHorizontal();

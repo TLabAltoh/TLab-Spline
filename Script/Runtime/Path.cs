@@ -190,7 +190,7 @@ namespace TLab.CurveTool
         {
             if (i % 3 == 0 || !m_autoSetControlPoints)
             {
-                Vector3 deltaMove = pos - m_points[i];
+                var deltaMove = pos - m_points[i];
 
                 m_points[i] = pos;
 
@@ -229,14 +229,14 @@ namespace TLab.CurveTool
                          * -1                        4  
                          */
 
-                        bool nextPointIsAnchor = (i + 1) % 3 == 0;
-                        int correspondingControlIndex = nextPointIsAnchor ? i + 2 : i - 2;
-                        int anchorIndex = nextPointIsAnchor ? i + 1 : i - 1;
+                        var nextPointIsAnchor = (i + 1) % 3 == 0;
+                        var correspondingControlIndex = nextPointIsAnchor ? i + 2 : i - 2;
+                        var anchorIndex = nextPointIsAnchor ? i + 1 : i - 1;
 
                         if (correspondingControlIndex > -1 && correspondingControlIndex < m_points.Count || m_isClosed)
                         {
-                            float dst = (m_points[LoopIndex(anchorIndex)] - m_points[LoopIndex(correspondingControlIndex)]).magnitude;
-                            Vector3 dir = (m_points[LoopIndex(anchorIndex)] - pos).normalized;
+                            var dst = (m_points[LoopIndex(anchorIndex)] - m_points[LoopIndex(correspondingControlIndex)]).magnitude;
+                            var dir = (m_points[LoopIndex(anchorIndex)] - pos).normalized;
                             m_points[LoopIndex(correspondingControlIndex)] = m_points[LoopIndex(anchorIndex)] + dir * dst;
                         }
                     }
@@ -260,31 +260,31 @@ namespace TLab.CurveTool
                 return false;
             }
 
-            List<Vector3> evenlySpacedPoints = new List<Vector3>();
+            var evenlySpacedPoints = new List<Vector3>();
             evenlySpacedPoints.Add(m_points[0]);
-            Vector3 previousPoint = m_points[0];
-            float dstSinceLastEvenPoint = 0.0f;
+            var previousPoint = m_points[0];
+            var dstSinceLastEvenPoint = 0.0f;
 
             for (int segmentIndex = 0; segmentIndex < NumSegments; segmentIndex++)
             {
-                Vector3[] p = GetPointInSegment(segmentIndex);
+                var p = GetPointInSegment(segmentIndex);
 
-                float controlNetLength = Vector3.Distance(p[0], p[1]) + Vector3.Distance(p[1], p[2]) + Vector3.Distance(p[2], p[3]);
-                float estimatedCurveLength = Vector3.Distance(p[0], p[3]) + controlNetLength / 2.0f;
-                int divisions = Mathf.CeilToInt(estimatedCurveLength * resolution * 10);
+                var controlNetLength = Vector3.Distance(p[0], p[1]) + Vector3.Distance(p[1], p[2]) + Vector3.Distance(p[2], p[3]);
+                var estimatedCurveLength = Vector3.Distance(p[0], p[3]) + controlNetLength / 2.0f;
+                var divisions = Mathf.CeilToInt(estimatedCurveLength * resolution * 10);
 
-                float t = 0.0f;
+                var t = 0.0f;
 
                 while (t <= 1.0f)
                 {
                     t += 1.0f / divisions;
-                    Vector3 pointOnCurve = Bezier.EvaluateCubic(p[0], p[1], p[2], p[3], t);
+                    var pointOnCurve = Bezier.EvaluateCubic(p[0], p[1], p[2], p[3], t);
                     dstSinceLastEvenPoint += Vector3.Distance(previousPoint, pointOnCurve);
 
                     while (dstSinceLastEvenPoint >= spacing)
                     {
-                        float overshootDst = dstSinceLastEvenPoint - spacing;
-                        Vector3 newEvenlySpacedPoint = pointOnCurve + (previousPoint - pointOnCurve).normalized * overshootDst;
+                        var overshootDst = dstSinceLastEvenPoint - spacing;
+                        var newEvenlySpacedPoint = pointOnCurve + (previousPoint - pointOnCurve).normalized * overshootDst;
                         evenlySpacedPoints.Add(newEvenlySpacedPoint);
                         dstSinceLastEvenPoint = overshootDst;
                         previousPoint = newEvenlySpacedPoint;
@@ -328,14 +328,14 @@ namespace TLab.CurveTool
              *   0                   +-3
              */
 
-            Vector3 anchorPos = m_points[anchorIndex];
-            Vector3 dir = Vector3.zero;
-            float[] neighbourDistance = new float[2];
+            var anchorPos = m_points[anchorIndex];
+            var dir = Vector3.zero;
+            var neighbourDistance = new float[2];
 
             // if neighbour exist or close enabled
             if (anchorIndex - 3 > -1 || m_isClosed)
             {
-                Vector3 offset = m_points[LoopIndex(anchorIndex - 3)] - anchorPos;
+                var offset = m_points[LoopIndex(anchorIndex - 3)] - anchorPos;
                 dir += offset.normalized;
                 neighbourDistance[0] = offset.magnitude;
             }
@@ -343,7 +343,7 @@ namespace TLab.CurveTool
             // if neighbour exist or close enabled
             if (anchorIndex + 3 < m_points.Count || m_isClosed)
             {
-                Vector3 offset = m_points[LoopIndex(anchorIndex + 3)] - anchorPos;
+                var offset = m_points[LoopIndex(anchorIndex + 3)] - anchorPos;
                 dir -= offset.normalized;
                 neighbourDistance[1] = -offset.magnitude;
             }
@@ -352,7 +352,7 @@ namespace TLab.CurveTool
 
             for (int i = 0; i < 2; i++)
             {
-                int controlIndex = anchorIndex + i * 2 - 1;
+                var controlIndex = anchorIndex + i * 2 - 1;
 
                 if (controlIndex > -1 && controlIndex < m_points.Count || m_isClosed)
                 {
