@@ -31,6 +31,7 @@ namespace TLab.CurveTool
         [SerializeField] private float m_space = 0.5f;
 
         [Header("Array Settings")]
+        [SerializeField] private uint m_skip = 0;
         [SerializeField] private float m_offset = 1.0f;
         [SerializeField] private Vector3 m_scale = new Vector3(1.0f, 1.0f, 1.0f);
         [SerializeField] private MeshElement m_element;
@@ -83,12 +84,19 @@ namespace TLab.CurveTool
             public Triangle triangle1;
         };
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="path"></param>
         public void CopyPath(Path path)
         {
             var creator = GetComponent<PathCreator>();
             creator.path = path;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
         public void UpdateRoad()
         {
             m_element.GetBounds(out var bounds);
@@ -380,6 +388,12 @@ namespace TLab.CurveTool
             return true;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="points"></param>
+        /// <param name="isClosed"></param>
+        /// <returns></returns>
         public Mesh CreateArrayMesh(Vector3[] points, bool isClosed)
         {
             var combine = new CombineInstance[m_range.Length];
@@ -416,13 +430,18 @@ namespace TLab.CurveTool
                 var end = (int)(m_range[r].y * m_points.Length);
                 var length = end - start + 1;
 
+                if (m_skip > 0)
+                {
+                    length /= (int)m_skip;
+                }
+
                 var arrayNum = isClosed ? length : (length - 1);
 
                 var verts = new Vector3[arrayNum * srcVerts.Length];
                 var uvs = new Vector2[verts.Length];
                 var tris = new int[arrayNum * srcTris.Length];
 
-                for (int p = start, i = 0; (p < end) && (i < length); p++, i++)
+                for (int p = start, i = 0; (p < end) && (i < length); p += (1 + (int)m_skip), i++)
                 {
                     if ((p > 0 && p < points.Length - 1) && (i > 0 && i < length) || isClosed)
                     {
@@ -446,7 +465,7 @@ namespace TLab.CurveTool
                             var posInPlane = lerpL * boundsUVs[j].x + lerpR * (1 - boundsUVs[j].x);
                             var zOffset = Vector3.Cross((LF - RB), (LB - RB)).normalized * srcVerts[j].y;
 
-                            verts[i * srcVerts.Length + j] = posInPlane + zOffset * m_scale.y * (maxYP - maxYN);
+                            verts[i * srcVerts.Length + j] = posInPlane + zOffset * m_scale.y;
                             uvs[i * srcVerts.Length + j] = srcUvs[j];
                         }
                     }
@@ -479,6 +498,11 @@ namespace TLab.CurveTool
             return combinedMesh;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="points"></param>
+        /// <param name="isClosed"></param>
         public void ArrayMesh(Vector3[] points, bool isClosed)
         {
             // Mesh

@@ -8,6 +8,14 @@ namespace TLab.MeshEngine
         [SerializeField] private Vector2 m_boundOffsetY;
         [SerializeField] private Vector2 m_boundOffsetZ;
 
+#if UNITY_EDITOR
+        [Header("Editor Property")]
+
+        [HideInInspector] public Mesh cash;
+
+        public bool draw = false;
+#endif
+
         public virtual void GetMeshInfo(
             out Vector3[] vertices, out Vector2[] uv, out int[] triangles)
         {
@@ -52,17 +60,69 @@ namespace TLab.MeshEngine
         {
             GetMesh(out var mesh);
 
-            var dummy = new Bounds();
+            var dummy = mesh.bounds;
 
-            dummy.max = mesh.bounds.max + Vector3.right * m_boundOffsetX.y;
-            dummy.max = mesh.bounds.max + Vector3.up * m_boundOffsetY.y;
-            dummy.max = mesh.bounds.max + Vector3.forward * m_boundOffsetZ.y;
+            dummy.max = dummy.max + Vector3.right * m_boundOffsetX.y;
+            dummy.max = dummy.max + Vector3.up * m_boundOffsetY.y;
+            dummy.max = dummy.max + Vector3.forward * m_boundOffsetZ.y;
 
-            dummy.min = mesh.bounds.min - Vector3.right * m_boundOffsetX.x;
-            dummy.min = mesh.bounds.min - Vector3.up * m_boundOffsetY.x;
-            dummy.min = mesh.bounds.min - Vector3.forward * m_boundOffsetZ.x;
+            dummy.min = dummy.min - Vector3.right * m_boundOffsetX.x;
+            dummy.min = dummy.min - Vector3.up * m_boundOffsetY.x;
+            dummy.min = dummy.min - Vector3.forward * m_boundOffsetZ.x;
 
             bounds = dummy;
         }
+
+        public virtual GameObject Instantiate(
+            Vector3 position, Quaternion rotation,
+            bool collision = false, string name = "", Transform parent = null)
+        {
+            GetMesh(out var mesh);
+
+            var go = new GameObject(name);
+
+            go.transform.parent = parent;
+
+            var filter = go.AddComponent<MeshFilter>();
+
+            filter.sharedMesh = mesh;
+
+            var renderer = go.AddComponent<MeshRenderer>();
+
+            if (collision)
+            {
+                var collider = go.AddComponent<MeshCollider>();
+
+                collider.sharedMesh = mesh;
+            }
+
+            go.transform.position = position;
+            go.transform.rotation = rotation;
+
+            return go;
+        }
+
+#if UNITY_EDITOR
+
+        public virtual void Cash()
+        {
+            GetMesh(out cash);
+        }
+
+        public virtual void OnDrawGizmosSelected()
+        {
+            if (draw && cash != null)
+            {
+                Gizmos.color = Color.green;
+
+                var cache = Gizmos.matrix;
+
+                Gizmos.matrix = Matrix4x4.TRS(transform.position, transform.rotation, transform.lossyScale);
+                Gizmos.DrawWireCube(cash.bounds.center, cash.bounds.size);
+
+                Gizmos.matrix = cache;
+            }
+        }
+#endif
     }
 }

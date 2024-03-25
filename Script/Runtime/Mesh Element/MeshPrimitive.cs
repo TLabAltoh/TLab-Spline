@@ -18,10 +18,5 @@ namespace TLab.MeshEngine
             mesh = m_mesh;
             mesh.name = name;
         }
-
-        public override void GetBounds(out Bounds bounds)
-        {
-            bounds = m_mesh.bounds;
-        }
     }
 }

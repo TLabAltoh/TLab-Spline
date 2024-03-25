@@ -25,6 +25,7 @@ namespace TLab.CurveTool.Editor
             DrawProperty("m_zUp");
             DrawProperty("m_space");
 
+            DrawProperty("m_skip");
             DrawProperty("m_offset");
             DrawProperty("m_scale");
             DrawProperty("m_element");
@@ -42,12 +43,14 @@ namespace TLab.CurveTool.Editor
 
             EditorGUILayout.BeginHorizontal();
 
-            if (GUILayout.Button("Update", GUILayout.Width(Screen.width / 3)))
+            var width = GUILayout.Width(Screen.width / 3);
+
+            if (GUILayout.Button("Update", width))
             {
                 m_instance.UpdateRoad();
             }
 
-            if (GUILayout.Button("Export", GUILayout.Width(Screen.width / 3)))
+            if (GUILayout.Button("Export", width))
             {
                 m_instance.Export();
             }
@@ -56,14 +59,14 @@ namespace TLab.CurveTool.Editor
 
             EditorGUILayout.BeginHorizontal();
 
-            if (GUILayout.Button("Copy Path", GUILayout.Width(Screen.width / 3)))
+            if (GUILayout.Button("Copy Path", width))
             {
                 var creator = m_instance.GetComponent<PathCreator>();
 
                 m_path = creator.path;
             }
 
-            if (GUILayout.Button("Paste Path", GUILayout.Width(Screen.width / 3)))
+            if (GUILayout.Button("Paste Path", width))
             {
                 m_instance.CopyPath(m_path);
 
