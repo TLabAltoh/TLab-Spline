@@ -120,7 +120,6 @@ namespace TLab.CurveTool
                         var mesh = CreateArrayMesh(m_points, path.IsClosed);
                         GetComponent<MeshFilter>().sharedMesh = mesh;
                         GetComponent<MeshCollider>().sharedMesh = m_collision ? mesh : null;
-                        GetComponent<MeshRenderer>().sharedMaterial.mainTextureScale = new Vector2(1, 1);
                     }
                     break;
                 case CurveMode.TERRAIN:
@@ -426,59 +425,56 @@ namespace TLab.CurveTool
 
             for (int r = 0; r < m_range.Length; r++)
             {
-                var start = (int)(m_range[r].x * m_points.Length);
-                var end = (int)(m_range[r].y * m_points.Length);
-                var length = end - start + 1;
+                var start = (int)(m_range[r].x * (m_points.Length - 1));
+                var end = (int)(m_range[r].y * (m_points.Length - 1));
+                var length = end - start;
 
                 if (m_skip > 0)
                 {
                     length /= (int)m_skip;
                 }
 
-                var arrayNum = isClosed ? length : (length - 1);
-
-                var verts = new Vector3[arrayNum * srcVerts.Length];
-                var uvs = new Vector2[verts.Length];
-                var tris = new int[arrayNum * srcTris.Length];
-
-                for (int p = start, i = 0; (p < end) && (i < length); p += (1 + (int)m_skip), i++)
+                if (isClosed)
                 {
-                    if ((p > 0 && p < points.Length - 1) && (i > 0 && i < length) || isClosed)
+                    length++;
+                }
+
+                var verts = new Vector3[length * srcVerts.Length];
+                var uvs = new Vector2[verts.Length];
+                var tris = new int[length * srcTris.Length];
+
+                for (int i = 0, p = start; i < length; p += (1 + (int)m_skip), i++)
+                {
+                    /*
+                     *    2 -----・----- 3
+                     *    
+                     *    
+                     *    0 -----・----- 1
+                     */
+
+                    var LF = planeMesh[(p * 2 + 0) % planeMesh.Length];
+                    var RF = planeMesh[(p * 2 + 1) % planeMesh.Length];
+                    var LB = planeMesh[(p * 2 + 2) % planeMesh.Length];
+                    var RB = planeMesh[(p * 2 + 3) % planeMesh.Length];
+
+                    for (int j = 0; j < srcVerts.Length; j++)
                     {
-                        /*
-                         *     0 -----・-----  1
-                         *    
-                         *    
-                         *    -2 -----・----- -1
-                         */
+                        var lerpL = LF * boundsUVs[j].z + LB * (1 - boundsUVs[j].z);
+                        var lerpR = RF * boundsUVs[j].z + RB * (1 - boundsUVs[j].z);
 
-                        var LF = planeMesh[p * 2];
-                        var RF = planeMesh[(p * 2 + 1) % planeMesh.Length];
-                        var LB = planeMesh[(p * 2 - 2 + planeMesh.Length) % planeMesh.Length];
-                        var RB = planeMesh[(p * 2 - 1 + planeMesh.Length) % planeMesh.Length];
+                        var posInPlane = lerpL * boundsUVs[j].x + lerpR * (1 - boundsUVs[j].x);
+                        var zOffset = Vector3.Cross((LF - RB), (LB - RB)).normalized * srcVerts[j].y;
 
-                        for (int j = 0; j < srcVerts.Length; j++)
-                        {
-                            var lerpL = LF * boundsUVs[j].z + LB * (1 - boundsUVs[j].z);
-                            var lerpR = RF * boundsUVs[j].z + RB * (1 - boundsUVs[j].z);
-
-                            var posInPlane = lerpL * boundsUVs[j].x + lerpR * (1 - boundsUVs[j].x);
-                            var zOffset = Vector3.Cross((LF - RB), (LB - RB)).normalized * srcVerts[j].y;
-
-                            verts[i * srcVerts.Length + j] = posInPlane + zOffset * m_scale.y;
-                            uvs[i * srcVerts.Length + j] = srcUvs[j];
-                        }
+                        verts[i * srcVerts.Length + j] = posInPlane + zOffset * m_scale.y;
+                        uvs[i * srcVerts.Length + j] = srcUvs[j];
                     }
                 }
 
                 for (int i = 0; i < length; i++)
                 {
-                    if ((i > 0 && i < length - 1) || isClosed)
+                    for (int j = 0; j < srcTris.Length; j++)
                     {
-                        for (int j = 0; j < srcTris.Length; j++)
-                        {
-                            tris[i * srcTris.Length + j] = i * srcVerts.Length + srcTris[j];
-                        }
+                        tris[i * srcTris.Length + j] = i * srcVerts.Length + srcTris[j];
                     }
                 }
 
