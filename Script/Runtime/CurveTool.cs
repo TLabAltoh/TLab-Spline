@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using UnityEngine;
+using System.Collections.Generic;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -20,11 +21,18 @@ namespace TLab.CurveTool
             TERRAIN
         };
 
+        private enum ArrayMode
+        {
+            MONO,
+            SEPARATE
+        }
+
         [Header("Update Option")]
         [SerializeField] private bool m_autoUpdate;
 
         [Header("Curve Mode")]
         [SerializeField] private CurveMode m_curveMode;
+        [SerializeField] private ArrayMode m_arrayMode;
 
         [Header("Curve Settings")]
         [SerializeField] private bool m_zUp = true;
@@ -117,9 +125,58 @@ namespace TLab.CurveTool
                 case CurveMode.ARRAY:
                     if (path.CalculateEvenlySpacedPoints(out m_points, boundsSize.z * m_scale.z * m_offset))
                     {
-                        var mesh = CreateArrayMesh(m_points, path.IsClosed);
-                        GetComponent<MeshFilter>().sharedMesh = mesh;
-                        GetComponent<MeshCollider>().sharedMesh = m_collision ? mesh : null;
+                        CreateArrayMesh(m_points, path.IsClosed, out var listMesh);
+
+                        switch (m_arrayMode)
+                        {
+                            case ArrayMode.MONO:
+
+                                while (this.transform.childCount > 0)
+                                {
+                                    DestroyImmediate(this.transform.GetChild(0).gameObject);
+                                }
+
+                                var combine = new CombineInstance[listMesh.Count];
+
+                                for (int i = 0; i < combine.Length; i++)
+                                {
+                                    combine[i].mesh = listMesh[i];
+                                    combine[i].transform = Matrix4x4.identity;
+                                }
+
+                                var combinedMesh = new Mesh();
+                                combinedMesh.CombineMeshes(combine);
+
+                                GetComponent<MeshFilter>().sharedMesh = combinedMesh;
+                                GetComponent<MeshCollider>().sharedMesh = m_collision ? combinedMesh : null;
+                                break;
+                            case ArrayMode.SEPARATE:
+
+                                while (this.transform.childCount > 0)
+                                {
+                                    DestroyImmediate(this.transform.GetChild(0).gameObject);
+                                }
+
+                                GetComponent<MeshFilter>().sharedMesh = null;
+                                GetComponent<MeshCollider>().sharedMesh = null;
+
+                                for (int i = 0; i < listMesh.Count; i++)
+                                {
+                                    var go = new GameObject("Element");
+
+                                    go.AddComponent<MeshFilter>().sharedMesh = listMesh[i];
+                                    go.AddComponent<MeshRenderer>();
+
+                                    if (m_collision)
+                                    {
+                                        go.AddComponent<MeshCollider>().sharedMesh = listMesh[i];
+                                    }
+
+                                    go.transform.parent = this.transform;
+                                }
+
+                                break;
+                        }
                     }
                     break;
                 case CurveMode.TERRAIN:
@@ -392,10 +449,10 @@ namespace TLab.CurveTool
         /// </summary>
         /// <param name="points"></param>
         /// <param name="isClosed"></param>
-        /// <returns></returns>
-        public Mesh CreateArrayMesh(Vector3[] points, bool isClosed)
+        /// <param name="meshs"></param>
+        public void CreateArrayMesh(Vector3[] points, bool isClosed, out List<Mesh> listMesh)
         {
-            var combine = new CombineInstance[m_range.Length];
+            listMesh = new List<Mesh>();
 
             m_element.GetMesh(out var srcMesh);
             m_element.GetBounds(out var bounds);
@@ -439,12 +496,12 @@ namespace TLab.CurveTool
                     length++;
                 }
 
-                var verts = new Vector3[length * srcVerts.Length];
-                var uvs = new Vector2[verts.Length];
-                var tris = new int[length * srcTris.Length];
-
                 for (int i = 0, p = start; i < length; p += (1 + (int)m_skip), i++)
                 {
+                    var verts = new Vector3[srcVerts.Length];
+                    var uvs = new Vector2[verts.Length];
+                    var tris = new int[srcTris.Length];
+
                     /*
                      *    2 -----E----- 3
                      *    
@@ -465,51 +522,24 @@ namespace TLab.CurveTool
                         var posInPlane = lerpL * boundsUVs[j].x + lerpR * (1 - boundsUVs[j].x);
                         var zOffset = Vector3.Cross((LF - RB), (LB - RB)).normalized * srcVerts[j].y;
 
-                        verts[i * srcVerts.Length + j] = posInPlane + zOffset * m_scale.y;
-                        uvs[i * srcVerts.Length + j] = srcUvs[j];
+                        verts[j] = posInPlane + zOffset * m_scale.y;
+                        uvs[j] = srcUvs[j];
                     }
-                }
 
-                for (int i = 0; i < length; i++)
-                {
                     for (int j = 0; j < srcTris.Length; j++)
                     {
-                        tris[i * srcTris.Length + j] = i * srcVerts.Length + srcTris[j];
+                        tris[j] = srcTris[j];
                     }
+
+                    Mesh mesh = new Mesh();
+                    mesh.vertices = verts;
+                    mesh.triangles = tris;
+                    mesh.uv = uvs;
+                    mesh.RecalculateNormals();
+
+                    listMesh.Add(mesh);
                 }
-
-                Mesh mesh = new Mesh();
-                mesh.vertices = verts;
-                mesh.triangles = tris;
-                mesh.uv = uvs;
-                mesh.RecalculateNormals();
-
-                combine[r].mesh = mesh;
-                combine[r].transform = Matrix4x4.identity;
             }
-
-            var combinedMesh = new Mesh();
-            combinedMesh.CombineMeshes(combine);
-
-            return combinedMesh;
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="points"></param>
-        /// <param name="isClosed"></param>
-        public void ArrayMesh(Vector3[] points, bool isClosed)
-        {
-            // Mesh
-            PathCreator creator = GetComponent<PathCreator>();
-            Mesh roadMesh = CreateArrayMesh(points, isClosed);
-            GetComponent<MeshFilter>().sharedMesh = roadMesh;
-            GetComponent<MeshCollider>().sharedMesh = roadMesh;
-
-#if UNITY_EDITOR
-            EditorUtility.SetDirty(creator);
-#endif
         }
     }
 }

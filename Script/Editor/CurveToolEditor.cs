@@ -21,6 +21,7 @@ namespace TLab.CurveTool.Editor
 
             DrawProperty("m_autoUpdate");
             DrawProperty("m_curveMode");
+            DrawProperty("m_arrayMode");
 
             DrawProperty("m_zUp");
             DrawProperty("m_space");
