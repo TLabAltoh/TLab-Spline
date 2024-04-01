@@ -1,6 +1,7 @@
+using System.Collections.Generic;
+using System.Collections;
 using System.Runtime.InteropServices;
 using UnityEngine;
-using System.Collections.Generic;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -125,51 +126,53 @@ namespace TLab.CurveTool
                 case CurveMode.ARRAY:
                     if (path.CalculateEvenlySpacedPoints(out m_points, boundsSize.z * m_scale.z * m_offset))
                     {
-                        CreateArrayMesh(m_points, path.IsClosed, out var listMesh);
+                        var quadMeshTask = UpdateQuadMesh(points, path.IsClosed);
+
+                        while (quadMeshTask.MoveNext()) ;
+
+                        var arrayMeshTask = CreateArrayMesh(path.IsClosed);
+
+                        while (this.transform.childCount > 0)
+                        {
+                            DestroyImmediate(this.transform.GetChild(0).gameObject);
+                        }
 
                         switch (m_arrayMode)
                         {
                             case ArrayMode.MONO:
 
-                                while (this.transform.childCount > 0)
-                                {
-                                    DestroyImmediate(this.transform.GetChild(0).gameObject);
-                                }
+                                var combines = new List<CombineInstance>();
 
-                                var combine = new CombineInstance[listMesh.Count];
-
-                                for (int i = 0; i < combine.Length; i++)
+                                while (arrayMeshTask.MoveNext())
                                 {
-                                    combine[i].mesh = listMesh[i];
-                                    combine[i].transform = Matrix4x4.identity;
+                                    var combine = new CombineInstance();
+                                    combine.mesh = arrayMeshTask.Current;
+                                    combine.transform = Matrix4x4.identity;
+
+                                    combines.Add(combine);
                                 }
 
                                 var combinedMesh = new Mesh();
-                                combinedMesh.CombineMeshes(combine);
+                                combinedMesh.CombineMeshes(combines.ToArray());
 
                                 GetComponent<MeshFilter>().sharedMesh = combinedMesh;
                                 GetComponent<MeshCollider>().sharedMesh = m_collision ? combinedMesh : null;
                                 break;
                             case ArrayMode.SEPARATE:
 
-                                while (this.transform.childCount > 0)
-                                {
-                                    DestroyImmediate(this.transform.GetChild(0).gameObject);
-                                }
-
                                 GetComponent<MeshFilter>().sharedMesh = null;
                                 GetComponent<MeshCollider>().sharedMesh = null;
 
-                                for (int i = 0; i < listMesh.Count; i++)
+                                while (arrayMeshTask.MoveNext())
                                 {
                                     var go = new GameObject("Element");
 
-                                    go.AddComponent<MeshFilter>().sharedMesh = listMesh[i];
+                                    go.AddComponent<MeshFilter>().sharedMesh = arrayMeshTask.Current;
                                     go.AddComponent<MeshRenderer>();
 
                                     if (m_collision)
                                     {
-                                        go.AddComponent<MeshCollider>().sharedMesh = listMesh[i];
+                                        go.AddComponent<MeshCollider>().sharedMesh = arrayMeshTask.Current;
                                     }
 
                                     go.transform.parent = this.transform;
@@ -182,12 +185,11 @@ namespace TLab.CurveTool
                 case CurveMode.TERRAIN:
                     if (path.CalculateEvenlySpacedPoints(out m_points, m_space))
                     {
-                        if (!GetQuadMeshInfo(m_points, path.IsClosed, out Vector3[] verts, out Vector2[] uvs, out int[] tris))
-                        {
-                            break;
-                        }
+                        var quadMeshTask = UpdateQuadMesh(points, path.IsClosed);
 
-                        var planes = new Plane[tris.Length / 6];
+                        while (quadMeshTask.MoveNext()) ;
+
+                        var planes = new Plane[m_quadTris.Length / 6];
 
                         for (int i = 0; i < planes.Length; i++)
                         {
@@ -197,24 +199,24 @@ namespace TLab.CurveTool
                             {
                                 triangle0 = new Triangle
                                 {
-                                    vert0 = transform.TransformPoint(verts[tris[offset + 0]]),
-                                    vert1 = transform.TransformPoint(verts[tris[offset + 1]]),
-                                    vert2 = transform.TransformPoint(verts[tris[offset + 2]]),
+                                    vert0 = transform.TransformPoint(m_quadVerts[m_quadTris[offset + 0]]),
+                                    vert1 = transform.TransformPoint(m_quadVerts[m_quadTris[offset + 1]]),
+                                    vert2 = transform.TransformPoint(m_quadVerts[m_quadTris[offset + 2]]),
 
-                                    uv0 = uvs[tris[offset + 0]],
-                                    uv1 = uvs[tris[offset + 1]],
-                                    uv2 = uvs[tris[offset + 2]]
+                                    uv0 = m_quadUVs[m_quadTris[offset + 0]],
+                                    uv1 = m_quadUVs[m_quadTris[offset + 1]],
+                                    uv2 = m_quadUVs[m_quadTris[offset + 2]]
                                 },
 
                                 triangle1 = new Triangle
                                 {
-                                    vert0 = transform.TransformPoint(verts[tris[offset + 3]]),
-                                    vert1 = transform.TransformPoint(verts[tris[offset + 4]]),
-                                    vert2 = transform.TransformPoint(verts[tris[offset + 5]]),
+                                    vert0 = transform.TransformPoint(m_quadVerts[m_quadTris[offset + 3]]),
+                                    vert1 = transform.TransformPoint(m_quadVerts[m_quadTris[offset + 4]]),
+                                    vert2 = transform.TransformPoint(m_quadVerts[m_quadTris[offset + 5]]),
 
-                                    uv0 = uvs[tris[offset + 3]],
-                                    uv1 = uvs[tris[offset + 4]],
-                                    uv2 = uvs[tris[offset + 5]]
+                                    uv0 = m_quadUVs[m_quadTris[offset + 3]],
+                                    uv1 = m_quadUVs[m_quadTris[offset + 4]],
+                                    uv2 = m_quadUVs[m_quadTris[offset + 5]]
                                 },
                             };
                         }
@@ -314,21 +316,20 @@ namespace TLab.CurveTool
             {
                 if (path.CalculateEvenlySpacedPoints(out m_points, m_space))
                 {
-                    if (!GetQuadMeshInfo(m_points, path.IsClosed, out Vector3[] verts, out Vector2[] uvs, out int[] tris))
-                    {
-                        return;
-                    }
+                    var quadMeshTask = UpdateQuadMesh(points, path.IsClosed);
+
+                    while (quadMeshTask.MoveNext()) ;
 
                     m_mat.SetPass(0);
 
                     GL.PushMatrix();
 
-                    for (int i = 0; i < tris.Length; i += 3)
+                    for (int i = 0; i < m_quadTris.Length; i += 3)
                     {
                         var corners = new Vector3[3];
-                        corners[0] = verts[tris[i + 0]];
-                        corners[1] = verts[tris[i + 1]];
-                        corners[2] = verts[tris[i + 2]];
+                        corners[0] = m_quadVerts[m_quadTris[i + 0]];
+                        corners[1] = m_quadVerts[m_quadTris[i + 1]];
+                        corners[2] = m_quadVerts[m_quadTris[i + 2]];
 
                         transform.TransformPoints(corners, corners);
 
@@ -369,24 +370,26 @@ namespace TLab.CurveTool
             go.GetComponent<MeshRenderer>().sharedMaterial.mainTextureScale = new Vector2(1, 1);
         }
 
+        private Vector3[] m_quadVerts;
+        private Vector2[] m_quadUVs;
+        private int[] m_quadTris;
+
         /// <summary>
         /// Obtain a planar mesh along the path. This planar mesh is used to deform the array object.
         /// </summary>
         /// <param name="points"></param>
         /// <param name="isClosed"></param>
         /// <returns></returns>
-        private bool GetQuadMeshInfo(
-            Vector3[] points, bool isClosed,
-            out Vector3[] verts, out Vector2[] uvs, out int[] tris)
+        private IEnumerator UpdateQuadMesh(Vector3[] points, bool isClosed)
         {
             m_element.GetBounds(out var bounds);
             var boundsSize = bounds.size;
 
-            verts = new Vector3[points.Length * 2];
-            uvs = new Vector2[verts.Length];
+            m_quadVerts = new Vector3[points.Length * 2];
+            m_quadUVs = new Vector2[m_quadVerts.Length];
 
             int numTris = (points.Length - 1) + (isClosed ? 2 : 0);
-            tris = new int[2 * numTris * 3];
+            m_quadTris = new int[2 * numTris * 3];
 
             int vertIndex = 0;
             int triIndex = 0;
@@ -411,8 +414,8 @@ namespace TLab.CurveTool
                 var left = new Vector3(-forward.z, m_zUp ? 0.0f : forward.y, forward.x);
 
                 var m_offset = left * boundsSize.x * 0.5f * m_scale.x;
-                verts[vertIndex + 0] = points[i] + m_offset;
-                verts[vertIndex + 1] = points[i] - m_offset;
+                m_quadVerts[vertIndex + 0] = points[i] + m_offset;
+                m_quadVerts[vertIndex + 1] = points[i] - m_offset;
 
                 /*
                  *    2 -----ÅE----- 3
@@ -423,37 +426,34 @@ namespace TLab.CurveTool
 
                 if (i < points.Length - 1 || isClosed)
                 {
-                    tris[triIndex + 0] = (vertIndex + 0) % verts.Length;
-                    tris[triIndex + 1] = (vertIndex + 2) % verts.Length;
-                    tris[triIndex + 2] = (vertIndex + 1) % verts.Length;
+                    m_quadTris[triIndex + 0] = (vertIndex + 0) % m_quadVerts.Length;
+                    m_quadTris[triIndex + 1] = (vertIndex + 2) % m_quadVerts.Length;
+                    m_quadTris[triIndex + 2] = (vertIndex + 1) % m_quadVerts.Length;
 
-                    tris[triIndex + 3] = (vertIndex + 1) % verts.Length;
-                    tris[triIndex + 4] = (vertIndex + 2) % verts.Length;
-                    tris[triIndex + 5] = (vertIndex + 3) % verts.Length;
+                    m_quadTris[triIndex + 3] = (vertIndex + 1) % m_quadVerts.Length;
+                    m_quadTris[triIndex + 4] = (vertIndex + 2) % m_quadVerts.Length;
+                    m_quadTris[triIndex + 5] = (vertIndex + 3) % m_quadVerts.Length;
                 }
 
                 var completinPercent = i / (float)points.Length;
                 var v = 1 - Mathf.Abs(2 * completinPercent - 1);
-                uvs[vertIndex + 0] = new Vector2(0, v);
-                uvs[vertIndex + 1] = new Vector2(1, v);
+                m_quadUVs[vertIndex + 0] = new Vector2(0, v);
+                m_quadUVs[vertIndex + 1] = new Vector2(1, v);
 
                 vertIndex += 2;
                 triIndex += 6;
-            }
 
-            return true;
+                yield return null;
+            }
         }
 
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="points"></param>
         /// <param name="isClosed"></param>
-        /// <param name="meshs"></param>
-        public void CreateArrayMesh(Vector3[] points, bool isClosed, out List<Mesh> listMesh)
+        /// <returns></returns>
+        public IEnumerator<Mesh> CreateArrayMesh(bool isClosed)
         {
-            listMesh = new List<Mesh>();
-
             m_element.GetMesh(out var srcMesh);
             m_element.GetBounds(out var bounds);
 
@@ -478,25 +478,17 @@ namespace TLab.CurveTool
                 boundsUVs[i].z = (srcVert.z - maxZN) / (maxZP - maxZN);
             }
 
-            GetQuadMeshInfo(points, isClosed, out var planeMesh, out var planeUvs, out var planeTris);
-
             for (int r = 0; r < m_range.Length; r++)
             {
                 var start = (int)(m_range[r].x * (m_points.Length - 1));
                 var end = (int)(m_range[r].y * (m_points.Length - 1));
-                var length = end - start;
-
-                if (m_skip > 0)
-                {
-                    length /= (int)m_skip;
-                }
 
                 if (isClosed)
                 {
-                    length++;
+                    end++;
                 }
 
-                for (int i = 0, p = start; i < length; p += (1 + (int)m_skip), i++)
+                for (int i = start; i < end; i += (1 + (int)m_skip))
                 {
                     var verts = new Vector3[srcVerts.Length];
                     var uvs = new Vector2[verts.Length];
@@ -509,10 +501,10 @@ namespace TLab.CurveTool
                      *    0 -----ÅE----- 1
                      */
 
-                    var LF = planeMesh[(p * 2 + 0) % planeMesh.Length];
-                    var RF = planeMesh[(p * 2 + 1) % planeMesh.Length];
-                    var LB = planeMesh[(p * 2 + 2) % planeMesh.Length];
-                    var RB = planeMesh[(p * 2 + 3) % planeMesh.Length];
+                    var LF = m_quadVerts[(i * 2 + 0) % m_quadVerts.Length];
+                    var RF = m_quadVerts[(i * 2 + 1) % m_quadVerts.Length];
+                    var LB = m_quadVerts[(i * 2 + 2) % m_quadVerts.Length];
+                    var RB = m_quadVerts[(i * 2 + 3) % m_quadVerts.Length];
 
                     for (int j = 0; j < srcVerts.Length; j++)
                     {
@@ -537,7 +529,7 @@ namespace TLab.CurveTool
                     mesh.uv = uvs;
                     mesh.RecalculateNormals();
 
-                    listMesh.Add(mesh);
+                    yield return mesh;
                 }
             }
         }
