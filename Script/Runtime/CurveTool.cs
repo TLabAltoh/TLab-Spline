@@ -47,6 +47,9 @@ namespace TLab.CurveTool
         [SerializeField] private bool m_collision = false;
         [SerializeField] private Vector2[] m_range = new Vector2[1];
 
+        [Header("Random Settings")]
+        [SerializeField] private float m_length = 1.0f;
+
         [Header("Terrain Group")]
         [SerializeField] private Terrain[] m_terrains;
         [SerializeField] private AnimationCurve m_fitRatio;
@@ -96,11 +99,161 @@ namespace TLab.CurveTool
         /// <summary>
         /// 
         /// </summary>
+        /// <param name="mesh"></param>
+        /// <param name="parent"></param>
+        public void AddChild(Mesh mesh)
+        {
+            var go = new GameObject("Element");
+
+            go.AddComponent<MeshFilter>().sharedMesh = mesh;
+            go.AddComponent<MeshRenderer>();
+
+            if (m_collision)
+            {
+                go.AddComponent<MeshCollider>().sharedMesh = mesh;
+            }
+
+            go.transform.parent = this.transform;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public void ClearChild()
+        {
+            while (this.transform.childCount > 0)
+            {
+                DestroyImmediate(this.transform.GetChild(0).gameObject);
+            }
+
+            m_tailQuad = null;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="mesh"></param>
+        public void UpdateRootMesh(Mesh mesh)
+        {
+            GetComponent<MeshFilter>().sharedMesh = mesh;
+            GetComponent<MeshCollider>().sharedMesh = m_collision && (mesh != null) ? mesh : null;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
         /// <param name="path"></param>
         public void CopyPath(Path path)
         {
             var creator = GetComponent<PathCreator>();
             creator.path = path;
+        }
+
+        private class TailQuad
+        {
+            public Vector3 vert0;
+            public Vector3 vert1;
+            public Vector3 vert2;
+            public Vector3 vert3;
+        }
+
+        private TailQuad m_tailQuad = null;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public void ExpandedByRandomChild()
+        {
+            var creator = GetComponent<PathCreator>();
+
+            var path = creator.path;
+
+            if (path.IsClosed)
+            {
+                return;
+            }
+
+            // If TailQuad is null, quadVerts will have the quad mesh info of the parent mesh.
+
+            var vert0 = m_quadVerts[m_quadVerts.Length - 1];
+            var vert1 = m_quadVerts[m_quadVerts.Length - 2];
+            var vert2 = m_quadVerts[m_quadVerts.Length - 3];
+            var vert3 = m_quadVerts[m_quadVerts.Length - 4];
+
+            if (m_tailQuad != null)
+            {
+                vert0 = m_tailQuad.vert0;
+                vert1 = m_tailQuad.vert1;
+                vert2 = m_tailQuad.vert2;
+                vert3 = m_tailQuad.vert3;
+            }
+
+            var middle0 = (vert0 + vert1) * 0.5f;
+            var middle1 = (vert2 + vert3) * 0.5f;
+
+            var upper = Vector3.Cross((vert0 - vert1).normalized, (vert0 - vert2).normalized);
+            var right = (vert0 - vert1).normalized;
+            var normal = Vector3.Cross(upper, right).normalized;
+
+            m_element.GetBounds(out var bounds);
+            var boundsSize = bounds.size;
+
+            //
+            // Create random anchor point and set control point from random point.
+            //
+
+            var newTheta = Random.Range(-Mathf.PI * 0.5f, Mathf.PI * 0.5f) * Mathf.Rad2Deg;
+            var newAnchor = middle0 + Quaternion.AngleAxis(newTheta, upper) * normal * (boundsSize.z * m_scale.z * m_offset) * m_length;
+            var newControl0 = middle0 + normal * (middle0 - newAnchor).magnitude * 0.5f;
+            var newControl1 = (middle0 + newAnchor) * 0.5f;
+
+            var newPath = new Path(new List<Vector3>()
+            {
+                middle0,
+                newControl0,
+                newControl1,
+                newAnchor
+            });
+
+            //
+            // Create mesh from random points
+            //
+
+            if (newPath.CalculateEvenlySpacedPoints(out var points, boundsSize.z * m_scale.z * m_offset))
+            {
+                var quadMeshTask = UpdateQuadMesh(points, false);
+
+                while (quadMeshTask.MoveNext()) ;
+
+                m_quadVerts[0] = vert1; // Fixing misalignments to make it seamless.
+                m_quadVerts[1] = vert0;
+
+                m_tailQuad = new TailQuad
+                {
+                    vert0 = m_quadVerts[m_quadVerts.Length - 1],
+                    vert1 = m_quadVerts[m_quadVerts.Length - 2],
+                    vert2 = m_quadVerts[m_quadVerts.Length - 3],
+                    vert3 = m_quadVerts[m_quadVerts.Length - 4],
+                };
+
+                var arrayMeshTask = CreateArrayMesh(false);
+
+                var combines = new List<CombineInstance>();
+
+                while (arrayMeshTask.MoveNext())
+                {
+                    var combine = new CombineInstance();
+                    combine.mesh = arrayMeshTask.Current;
+                    combine.transform = Matrix4x4.identity;
+
+                    combines.Add(combine);
+                }
+
+                var combinedMesh = new Mesh();
+                combinedMesh.CombineMeshes(combines.ToArray());
+
+                AddChild(combinedMesh);
+            }
         }
 
         /// <summary>
@@ -119,23 +272,19 @@ namespace TLab.CurveTool
                 case CurveMode.CURVE:
                     if (path.CalculateEvenlySpacedPoints(out m_points, m_space))
                     {
-                        GetComponent<MeshFilter>().sharedMesh = null;
-                        GetComponent<MeshCollider>().sharedMesh = null;
+                        UpdateRootMesh(null);
                     }
                     break;
                 case CurveMode.ARRAY:
                     if (path.CalculateEvenlySpacedPoints(out m_points, boundsSize.z * m_scale.z * m_offset))
                     {
+                        ClearChild();
+
                         var quadMeshTask = UpdateQuadMesh(points, path.IsClosed);
 
                         while (quadMeshTask.MoveNext()) ;
 
                         var arrayMeshTask = CreateArrayMesh(path.IsClosed);
-
-                        while (this.transform.childCount > 0)
-                        {
-                            DestroyImmediate(this.transform.GetChild(0).gameObject);
-                        }
 
                         switch (m_arrayMode)
                         {
@@ -155,27 +304,16 @@ namespace TLab.CurveTool
                                 var combinedMesh = new Mesh();
                                 combinedMesh.CombineMeshes(combines.ToArray());
 
-                                GetComponent<MeshFilter>().sharedMesh = combinedMesh;
-                                GetComponent<MeshCollider>().sharedMesh = m_collision ? combinedMesh : null;
+                                UpdateRootMesh(combinedMesh);
+
                                 break;
                             case ArrayMode.SEPARATE:
 
-                                GetComponent<MeshFilter>().sharedMesh = null;
-                                GetComponent<MeshCollider>().sharedMesh = null;
+                                UpdateRootMesh(null);
 
                                 while (arrayMeshTask.MoveNext())
                                 {
-                                    var go = new GameObject("Element");
-
-                                    go.AddComponent<MeshFilter>().sharedMesh = arrayMeshTask.Current;
-                                    go.AddComponent<MeshRenderer>();
-
-                                    if (m_collision)
-                                    {
-                                        go.AddComponent<MeshCollider>().sharedMesh = arrayMeshTask.Current;
-                                    }
-
-                                    go.transform.parent = this.transform;
+                                    AddChild(arrayMeshTask.Current);
                                 }
 
                                 break;

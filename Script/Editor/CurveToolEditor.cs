@@ -13,7 +13,7 @@ namespace TLab.CurveTool.Editor
 
         private ReorderableList m_ranges = null;
 
-        private static Path m_path;
+        private static Path m_clipboard;
 
         public override void OnInspectorGUI()
         {
@@ -31,6 +31,8 @@ namespace TLab.CurveTool.Editor
             DrawProperty("m_scale");
             DrawProperty("m_element");
             DrawProperty("m_collision");
+
+            DrawProperty("m_length");
 
             DrawProperty("m_terrains");
             DrawProperty("m_fitRatio");
@@ -64,14 +66,25 @@ namespace TLab.CurveTool.Editor
             {
                 var creator = m_instance.GetComponent<PathCreator>();
 
-                m_path = creator.path;
+                m_clipboard = new Path(creator.path);
             }
 
             if (GUILayout.Button("Paste Path", width))
             {
-                m_instance.CopyPath(m_path);
+                m_instance.CopyPath(m_clipboard);
+
+                m_clipboard = null;
 
                 EditorUtility.SetDirty(m_instance);
+            }
+
+            EditorGUILayout.EndHorizontal();
+
+            EditorGUILayout.BeginHorizontal();
+
+            if (GUILayout.Button("Expanded", width))
+            {
+                m_instance.ExpandedByRandomChild();
             }
 
             EditorGUILayout.EndHorizontal();

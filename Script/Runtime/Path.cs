@@ -108,9 +108,16 @@ namespace TLab.CurveTool
             };
         }
 
-        public Path(List<Vector3> m_points)
+        public Path(List<Vector3> points)
         {
-            this.m_points = m_points;
+            m_points = points;
+        }
+
+        public Path(Path path)
+        {
+            m_points = new List<Vector3>(path.m_points);
+            m_isClosed = path.m_isClosed;
+            m_autoSetControlPoints = path.m_autoSetControlPoints;
         }
 
         public void AddSegment(Vector3 anchorPos)
