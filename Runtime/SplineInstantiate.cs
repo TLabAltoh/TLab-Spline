@@ -167,7 +167,7 @@ namespace TLab.Spline
                     var left = new Vector3(-forward.z, m_zUp ? 0.0f : forward.y, forward.x);
 
                     instance.transform.position = (pos0 + pos1) * 0.5f - left * m_slideOffset;
-                    instance.transform.forward = forward;
+                    instance.transform.rotation = Quaternion.LookRotation(forward, Vector3.Cross(left, forward));
                     instance.transform.localScale = Vector3.Scale(instance.transform.localScale, m_scale);
                     instance.transform.parent = this.transform;
 
