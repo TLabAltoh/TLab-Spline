@@ -1,5 +1,6 @@
+#if UNITY_EDITOR
 using UnityEditor;
-using UnityEngine;
+#endif
 
 namespace TLab.Spline.Editor
 {
