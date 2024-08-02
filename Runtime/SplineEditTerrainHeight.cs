@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using System.Collections.Generic;
 using UnityEngine;
 using TLab.Spline.Util;
 
@@ -40,7 +41,7 @@ namespace TLab.Spline
             public Triangle triangle1;
         };
 
-        public override void UpdateWithCurrentSpline()
+        public override void Execute()
         {
             if (!m_spline)
             {
@@ -54,41 +55,44 @@ namespace TLab.Spline
                 return;
             }
 
-            if (m_spline.CalculateEvenlySpacedPoints(out var points, m_space))
+            if (GeneratePlaneAlongToSpline(m_zUp, m_spacing, m_arrayMode, out var splinePoints, out var verts, out var uvs, out var tris))
             {
-                GeneratePlaneAlongToSpline(points, m_spline.isClosed, m_arrayMode, out var verts, out var uvs, out var tris);
+                var planeList = new List<Plane>();
 
-                var planes = new Plane[tris.Length / 6];
-
-                for (int i = 0; i < planes.Length; i++)
+                foreach (var range in m_ranges)
                 {
-                    var offset = i * 6;
+                    var offset = 6;
 
-                    planes[i] = new Plane
+                    for (int i = (int)(range.x * tris.Length / offset); i < (int)(range.y * tris.Length / offset); i += (1 + (int)skip))
                     {
-                        triangle0 = new Triangle
+                        planeList.Add(new Plane
                         {
-                            vert0 = transform.TransformPoint(verts[tris[offset + 0]]),
-                            vert1 = transform.TransformPoint(verts[tris[offset + 1]]),
-                            vert2 = transform.TransformPoint(verts[tris[offset + 2]]),
+                            triangle0 = new Triangle
+                            {
+                                vert0 = transform.TransformPoint(verts[tris[i * offset + 0]]),
+                                vert1 = transform.TransformPoint(verts[tris[i * offset + 1]]),
+                                vert2 = transform.TransformPoint(verts[tris[i * offset + 2]]),
 
-                            uv0 = uvs[tris[offset + 0]],
-                            uv1 = uvs[tris[offset + 1]],
-                            uv2 = uvs[tris[offset + 2]]
-                        },
+                                uv0 = uvs[tris[i * offset + 0]],
+                                uv1 = uvs[tris[i * offset + 1]],
+                                uv2 = uvs[tris[i * offset + 2]]
+                            },
 
-                        triangle1 = new Triangle
-                        {
-                            vert0 = transform.TransformPoint(verts[tris[offset + 3]]),
-                            vert1 = transform.TransformPoint(verts[tris[offset + 4]]),
-                            vert2 = transform.TransformPoint(verts[tris[offset + 5]]),
+                            triangle1 = new Triangle
+                            {
+                                vert0 = transform.TransformPoint(verts[tris[i * offset + 3]]),
+                                vert1 = transform.TransformPoint(verts[tris[i * offset + 4]]),
+                                vert2 = transform.TransformPoint(verts[tris[i * offset + 5]]),
 
-                            uv0 = uvs[tris[offset + 3]],
-                            uv1 = uvs[tris[offset + 4]],
-                            uv2 = uvs[tris[offset + 5]]
-                        },
-                    };
+                                uv0 = uvs[tris[i * offset + 3]],
+                                uv1 = uvs[tris[i * offset + 4]],
+                                uv2 = uvs[tris[i * offset + 5]]
+                            },
+                        });
+                    }
                 }
+
+                var planes = planeList.ToArray();
 
                 GraphicsBuffer planesBuffer = null;
                 CSUtil.GraphicsBuffer(ref planesBuffer, GraphicsBuffer.Target.Structured, planes.Length, Marshal.SizeOf<Plane>());

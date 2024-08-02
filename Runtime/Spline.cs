@@ -82,9 +82,9 @@ namespace TLab.Spline
             };
         }
 
-        public void Init(List<Vector3> points)
+        public void Init(List<Vector3> spacedPoints)
         {
-            m_points = points;
+            m_points = spacedPoints;
         }
 
         public void Init(Spline path)
@@ -278,6 +278,91 @@ namespace TLab.Spline
             spacedPoints = evenlySpacedPoints.ToArray();
 
             return true;
+        }
+
+        public struct Point
+        {
+            public Vector3 forward;
+            public Vector3 up;
+            public Vector3 position;
+        }
+
+        public bool GetSplinePoints(out Point[] splinePoints, bool zUp, float spacing, float resolution = 1.0f)
+        {
+            var splinePointList = new List<Point>();
+            splinePoints = null;
+
+            if (CalculateEvenlySpacedPoints(out Vector3[] spacedPoints, spacing, resolution))
+            {
+                Vector3 prevLocalForward = spacedPoints[1 % spacedPoints.Length] - spacedPoints[0], prevLocalUp = Vector3.up;
+                prevLocalForward.Normalize();
+
+                for (int i = 0; i < spacedPoints.Length; i++)
+                {
+                    var pos0 = spacedPoints[(i - 1 + spacedPoints.Length) % spacedPoints.Length];
+                    var pos1 = spacedPoints[i];
+                    var pos2 = spacedPoints[(i + 1) % spacedPoints.Length];
+
+                    var offset = Vector3.zero;
+
+                    if (i < spacedPoints.Length - 1 || isClosed)  // Neighboring forward
+                        offset += pos2 - pos1;
+
+                    if (i > 0 || isClosed)  // Neighboring backward
+                        offset += pos1 - pos0;
+
+                    var sqrDst = offset.sqrMagnitude;
+
+                    var localForward = offset.normalized;
+                    var localUp = Vector3.up;
+
+                    if (!zUp)
+                    {
+                        var rot = prevLocalUp - offset * 2 / sqrDst * Vector3.Dot(offset, prevLocalUp);
+                        var tan = prevLocalForward - offset * 2 / sqrDst * Vector3.Dot(offset, prevLocalForward);
+                        var v2 = localForward - tan;
+                        var c2 = Vector3.Dot(v2, v2);
+
+                        localUp = rot - v2 * 2 / c2 * Vector3.Dot(v2, rot);
+                    }
+
+                    prevLocalForward = localForward;
+                    prevLocalUp = localUp;
+
+                    splinePointList.Add(new Point
+                    {
+                        forward = localForward,
+                        up = localUp,
+                        position = pos1,
+                    });
+                }
+
+                splinePoints = splinePointList.ToArray();
+
+                if (m_isClosed)
+                {
+                    var upAngleErrorAcrossjoin = Vector3.SignedAngle(splinePoints[splinePoints.Length - 1].up, splinePoints[0].up, splinePoints[0].forward);
+                    if (Mathf.Abs(upAngleErrorAcrossjoin) > 0.1f)
+                    {
+                        for (int i = 1; i < splinePoints.Length; i++)
+                        {
+                            var t = (i / (splinePoints.Length - 1f));
+                            var angle = upAngleErrorAcrossjoin * t;
+                            var rot = Quaternion.AngleAxis(angle, splinePoints[i].forward);
+                            splinePoints[i] = new Point()
+                            {
+                                forward = splinePointList[i].forward,
+                                up = rot * splinePointList[i].up,
+                                position = splinePointList[i].position,
+                            };
+                        }
+                    }
+                }
+
+                return true;
+            }
+
+            return false;
         }
 
         private void AutoSetAllAffectedControlPoints(int updateAnchorIndex)
