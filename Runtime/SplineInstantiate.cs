@@ -12,11 +12,11 @@ namespace TLab.Spline
         [Header("Array Instantiate")]
         [SerializeField] protected List<GameObject> m_items;
         [SerializeField] protected bool m_zUp = true;
-        [SerializeField] protected float m_space = 0.5f;
-        [SerializeField] protected float m_slideOffset = 0f;
         [SerializeField] protected uint m_skip = 0;
+        [SerializeField, Min(0)] protected float m_spacing = 0.5f;
+        [SerializeField] protected float m_slideOffset = 0f;
         [SerializeField] protected Vector3 m_scale = new Vector3(1.0f, 1.0f, 1.0f);
-        [SerializeField] protected Vector2[] m_range = new Vector2[1] { new Vector2(0, 1) };
+        [SerializeField] protected Vector2[] m_ranges = new Vector2[1] { new Vector2(0, 1) };
 
         public Spline spline
         {
@@ -26,20 +26,6 @@ namespace TLab.Spline
                 if (m_spline != value)
                 {
                     m_spline = value;
-
-                    RequestAutoUpdate();
-                }
-            }
-        }
-
-        public uint skip
-        {
-            get => m_skip;
-            set
-            {
-                if (m_skip != value)
-                {
-                    m_skip = value;
 
                     RequestAutoUpdate();
                 }
@@ -74,28 +60,28 @@ namespace TLab.Spline
             }
         }
 
-        public float space
+        public uint skip
         {
-            get => m_space;
+            get => m_skip;
             set
             {
-                if (m_space != value)
+                if (m_skip != value)
                 {
-                    m_space = value;
+                    m_skip = value;
 
                     RequestAutoUpdate();
                 }
             }
         }
 
-        public Vector3 scale
+        public float spacing
         {
-            get => m_scale;
+            get => m_spacing;
             set
             {
-                if (m_scale != value)
+                if (m_spacing != value)
                 {
-                    m_scale = value;
+                    m_spacing = value;
 
                     RequestAutoUpdate();
                 }
@@ -116,14 +102,28 @@ namespace TLab.Spline
             }
         }
 
-        public Vector2[] range
+        public Vector3 scale
         {
-            get => m_range;
+            get => m_scale;
             set
             {
-                if (m_range != value)
+                if (m_scale != value)
                 {
-                    m_range = value;
+                    m_scale = value;
+
+                    RequestAutoUpdate();
+                }
+            }
+        }
+
+        public Vector2[] ranges
+        {
+            get => m_ranges;
+            set
+            {
+                if (m_ranges != value)
+                {
+                    m_ranges = value;
 
                     RequestAutoUpdate();
                 }
@@ -140,40 +140,44 @@ namespace TLab.Spline
             }
         }
 
-        public virtual void InstantiateAlongToSpline(Vector3[] points, bool isClosed, List<GameObject> items)
+        public struct SplinePoint
         {
-            for (int r = 0; r < m_range.Length; r++)
+            public Vector3 forward;
+            public Vector3 up;
+            public Vector3 position;
+        }
+
+        public virtual void InstantiateAlongToSpline(bool zUp, uint skip, Vector2[] ranges, float spacing, List<GameObject> items)
+        {
+            if (m_spline.GetSplinePoints(out var splinePoints, zUp, spacing))
             {
-                var start = (int)(m_range[r].x * (points.Length - 1));
-                var end = (int)(m_range[r].y * (points.Length - 1));
-
-                if (isClosed)
+                foreach (var range in ranges)
                 {
-                    end++;
-                }
+                    for (int i = (int)(range.x * splinePoints.Length); i < (int)(range.y * splinePoints.Length); i += (1 + (int)skip))
+                    {
+                        var left0 = Vector3.Cross(splinePoints[i].forward, splinePoints[i].up);
+                        left0.Normalize();
 
-                for (int i = start; i < end; i += (1 + (int)m_skip))
-                {
-                    var pos0 = points[i];
-                    var pos1 = points[(i + 1) % points.Length];
+                        var left1 = Vector3.Cross(splinePoints[(i + 1) % splinePoints.Length].forward, splinePoints[(i + 1) % splinePoints.Length].up);
+                        left1.Normalize();
 
-                    var forward = pos1 - pos0;
-                    forward.Normalize();
+                        var left = (left0 + left1) * 0.5f;
 
-                    var selected = items.GetRandom();
+                        var forward = (splinePoints[(i + 1) % splinePoints.Length].forward + splinePoints[i].forward) * 0.5f;
+                        var up = (splinePoints[(i + 1) % splinePoints.Length].up + splinePoints[i].up) * 0.5f;
+                        var position = (splinePoints[(i + 1) % splinePoints.Length].position + splinePoints[i].position) * 0.5f;
 
-                    var instance = Instantiate(selected);
+                        var instance = Instantiate(items.GetRandom());
 
-                    var left = new Vector3(-forward.z, m_zUp ? 0.0f : forward.y, forward.x);
-
-                    instance.transform.position = (pos0 + pos1) * 0.5f - left * m_slideOffset;
-                    instance.transform.rotation = Quaternion.LookRotation(forward, Vector3.Cross(left, forward));
-                    instance.transform.localScale = Vector3.Scale(instance.transform.localScale, m_scale);
-                    instance.transform.parent = this.transform;
+                        instance.transform.position = position - left * m_slideOffset;
+                        instance.transform.rotation = Quaternion.LookRotation(forward, up);
+                        instance.transform.localScale = Vector3.Scale(instance.transform.localScale, m_scale);
+                        instance.transform.parent = this.transform;
 
 #if UNITY_EDITOR
-                    UnityEditor.EditorUtility.SetDirty(instance);
+                        UnityEditor.EditorUtility.SetDirty(instance);
 #endif
+                    }
                 }
             }
 
@@ -206,10 +210,7 @@ namespace TLab.Spline
                 return;
             }
 
-            if (m_spline.CalculateEvenlySpacedPoints(out var points, m_space))
-            {
-                InstantiateAlongToSpline(points, m_spline.isClosed, m_items);
-            }
+            InstantiateAlongToSpline(m_zUp, m_skip, m_ranges, m_spacing, m_items);
         }
     }
 }

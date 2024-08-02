@@ -19,7 +19,7 @@ namespace TLab.Spline.Editor
 
             if (GUILayout.Button("Update", width))
             {
-                m_instance.UpdateWithCurrentSpline();
+                m_instance.Execute();
             }
 
             if (GUILayout.Button("Export", width))
@@ -34,10 +34,7 @@ namespace TLab.Spline.Editor
         {
             DrawProperty("m_" + nameof(m_instance.meshElement));
             DrawProperty("m_" + nameof(m_instance.meshHolder));
-            DrawProperty("m_" + nameof(m_instance.slideOffset));
-            DrawProperty("m_" + nameof(m_instance.skip));
             DrawProperty("m_" + nameof(m_instance.collision));
-            DrawMinMaxProperty("m_" + nameof(m_instance.range), "Range");
         }
 
         protected override void OnEnable()

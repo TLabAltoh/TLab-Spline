@@ -29,7 +29,7 @@ namespace TLab.Spline.Editor
 
             if (GUILayout.Button("Update", width))
             {
-                m_base.UpdateWithCurrentSpline();
+                m_base.Execute();
             }
 
             EditorGUILayout.EndHorizontal();
@@ -44,9 +44,14 @@ namespace TLab.Spline.Editor
             DrawProperty("m_" + nameof(m_base.arrayMode));
 
             DrawProperty("m_" + nameof(m_base.zUp));
-            DrawProperty("m_" + nameof(m_base.space));
+
+            DrawProperty("m_" + nameof(m_base.skip));
+            DrawProperty("m_" + nameof(m_base.spacing));
+            DrawProperty("m_" + nameof(m_base.slideOffset));
 
             DrawProperty("m_" + nameof(m_base.size));
+
+            DrawMinMaxProperty("m_" + nameof(m_base.ranges), "Range");
 
             DrawProperty(nameof(m_base.drawGizmo));
 

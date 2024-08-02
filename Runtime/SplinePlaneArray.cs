@@ -16,8 +16,11 @@ namespace TLab.Spline
         [Header("Array")]
         [SerializeField] protected ArrayMode m_arrayMode;
         [SerializeField] protected bool m_zUp = true;
-        [SerializeField] protected float m_space = 0.5f;
+        [SerializeField] protected uint m_skip = 0;
+        [SerializeField, Min(0.5f)] protected float m_spacing = 0.5f;
+        [SerializeField] protected float m_slideOffset = 0f;
         [SerializeField] protected Vector3 m_size = new Vector3(1.0f, 1.0f, 1.0f);
+        [SerializeField] protected Vector2[] m_ranges = new Vector2[1] { new Vector2(0, 1) };
 
         [Header("Gizmo")]
         [SerializeField] public bool drawGizmo = false;
@@ -66,14 +69,42 @@ namespace TLab.Spline
             }
         }
 
-        public float space
+        public uint skip
         {
-            get => m_space;
+            get => m_skip;
             set
             {
-                if (m_space != value)
+                if (m_skip != value)
                 {
-                    m_space = value;
+                    m_skip = value;
+
+                    RequestAutoUpdate();
+                }
+            }
+        }
+
+        public float spacing
+        {
+            get => m_spacing;
+            set
+            {
+                if (m_spacing != value)
+                {
+                    m_spacing = Mathf.Clamp(value, 1, float.MaxValue);
+
+                    RequestAutoUpdate();
+                }
+            }
+        }
+
+        public float slideOffset
+        {
+            get => m_slideOffset;
+            set
+            {
+                if (m_slideOffset != value)
+                {
+                    m_slideOffset = value;
 
                     RequestAutoUpdate();
                 }
@@ -94,144 +125,140 @@ namespace TLab.Spline
             }
         }
 
-        private string THIS_NAME => "[" + this.GetType() + "] ";
-
-        protected virtual void GeneratePlaneAlongToSpline(Vector3[] points, bool isClosed, ArrayMode arrayMode, out Vector3[] verts, out Vector2[] uvs, out int[] tris)
+        public Vector2[] ranges
         {
-            switch (arrayMode)
+            get => m_ranges;
+            set
             {
-                case ArrayMode.NO_SPACE:
-                    {
-                        verts = new Vector3[points.Length * 2];
-                        uvs = new Vector2[verts.Length];
+                if (m_ranges != value)
+                {
+                    m_ranges = value;
 
-                        var numTris = (points.Length - 1) + (isClosed ? 2 : 0);
-                        tris = new int[2 * numTris * 3];
-
-                        var vertIndex = 0;
-                        var triIndex = 0;
-
-                        for (int i = 0; i < points.Length; i++)
-                        {
-                            var forward = Vector3.zero;
-
-                            if (i < points.Length - 1 || isClosed)  // Neighboring forward
-                                forward += points[(i + 1) % points.Length] - points[i];
-
-                            if (i > 0 || isClosed)  // Neighboring backward
-                                forward += points[i] - points[(i - 1 + points.Length) % points.Length];
-
-                            forward.Normalize();
-
-                            // Get z-up vector
-                            var left = new Vector3(-forward.z, m_zUp ? 0.0f : forward.y, forward.x);
-
-                            var m_offset = left * m_size.x;
-                            verts[vertIndex + 0] = points[i] + m_offset;
-                            verts[vertIndex + 1] = points[i] - m_offset;
-
-                            /*
-                             *    2 -----・----- 3
-                             *    
-                             *    
-                             *    0 -----・----- 1
-                             */
-
-                            if (i < points.Length - 1 || isClosed)
-                            {
-                                tris[triIndex + 0] = (vertIndex + 0) % verts.Length;
-                                tris[triIndex + 1] = (vertIndex + 2) % verts.Length;
-                                tris[triIndex + 2] = (vertIndex + 1) % verts.Length;
-
-                                tris[triIndex + 3] = (vertIndex + 1) % verts.Length;
-                                tris[triIndex + 4] = (vertIndex + 2) % verts.Length;
-                                tris[triIndex + 5] = (vertIndex + 3) % verts.Length;
-                            }
-
-                            var completinPercent = i / (float)points.Length;
-                            var v = 1 - Mathf.Abs(2 * completinPercent - 1);
-                            uvs[vertIndex + 0] = new Vector2(0, v);
-                            uvs[vertIndex + 1] = new Vector2(1, v);
-
-                            vertIndex += 2;
-                            triIndex += 6;
-                        }
-                    }
-                    break;
-                default:
-                    {
-                        var numArray = (points.Length + (isClosed ? 0 : -1));
-                        verts = new Vector3[numArray * 4];
-                        uvs = new Vector2[verts.Length];
-                        tris = new int[2 * numArray * 3];
-
-                        var vertIndex = 0;
-                        var triIndex = 0;
-
-                        for (int i = 0; i < numArray; i++)
-                        {
-                            var forward = points[(i + 1) % points.Length] - points[i];
-                            forward.Normalize();
-
-                            var left = new Vector3(-forward.z, m_zUp ? 0.0f : forward.y, forward.x);
-
-                            var offset = left * m_size.x;
-                            verts[vertIndex + 0] = points[i] + offset;
-                            verts[vertIndex + 1] = points[i] - offset;
-                            verts[vertIndex + 2] = points[(i + 1) % points.Length] + offset;
-                            verts[vertIndex + 3] = points[(i + 1) % points.Length] - offset;
-
-                            if (i < points.Length - 1 || isClosed)
-                            {
-                                tris[triIndex + 0] = (vertIndex + 0) % verts.Length;
-                                tris[triIndex + 1] = (vertIndex + 2) % verts.Length;
-                                tris[triIndex + 2] = (vertIndex + 1) % verts.Length;
-
-                                tris[triIndex + 3] = (vertIndex + 1) % verts.Length;
-                                tris[triIndex + 4] = (vertIndex + 2) % verts.Length;
-                                tris[triIndex + 5] = (vertIndex + 3) % verts.Length;
-                            }
-
-                            var completinPercent = i / (float)points.Length;
-                            var v = 1 - Mathf.Abs(2 * completinPercent - 1);
-                            uvs[vertIndex + 0] = new Vector2(0, v);
-                            uvs[vertIndex + 1] = new Vector2(1, v);
-
-                            completinPercent = (i + 1) % numArray / (float)points.Length;
-                            v = 1 - Mathf.Abs(2 * completinPercent - 1);
-                            uvs[vertIndex + 0] = new Vector2(0, v);
-                            uvs[vertIndex + 1] = new Vector2(1, v);
-
-                            vertIndex += 4;
-                            triIndex += 6;
-                        }
-                    }
-                    break;
+                    RequestAutoUpdate();
+                }
             }
         }
 
-        protected virtual Mesh GeneratePlaneMeshAlongToSpline(Vector3[] points, bool isClosed, ArrayMode arrayMode)
+        private string THIS_NAME => "[" + this.GetType() + "] ";
+
+        protected virtual bool GeneratePlaneAlongToSpline(bool zUp, float spacing, ArrayMode arrayMode, out Spline.Point[] splinePoints, out Vector3[] verts, out Vector2[] uvs, out int[] tris)
         {
-            GeneratePlaneAlongToSpline(points, isClosed, arrayMode, out var verts, out var uvs, out var tris);
-            var mesh = new Mesh();
-            mesh.vertices = verts;
-            mesh.uv = uvs;
-            mesh.triangles = tris;
+            verts = null;
+            uvs = null;
+            tris = null;
 
-            mesh.RecalculateNormals();
+            if (m_spline.GetSplinePoints(out splinePoints, zUp, spacing))
+            {
+                switch (arrayMode)
+                {
+                    case ArrayMode.NO_SPACE:
+                        {
+                            verts = new Vector3[splinePoints.Length * 2];
+                            uvs = new Vector2[verts.Length];
 
-            return mesh;
+                            var numTris = (splinePoints.Length - 1) + (m_spline.isClosed ? 1 : 0);
+                            tris = new int[2 * numTris * 3];
+
+                            var vertIndex = 0;
+                            var triIndex = 0;
+
+                            for (int i = 0; i < splinePoints.Length; i++)
+                            {
+                                var left = Vector3.Cross(splinePoints[i].up, splinePoints[i].forward);
+
+                                var offset = left * m_size.x;
+                                verts[vertIndex + 0] = splinePoints[i].position + offset;
+                                verts[vertIndex + 1] = splinePoints[i].position - offset;
+
+                                /*
+                                 *    2 -----・----- 3
+                                 *    
+                                 *    
+                                 *    0 -----・----- 1
+                                 */
+
+                                if (i < splinePoints.Length - 1 || m_spline.isClosed)
+                                {
+                                    tris[triIndex + 0] = (vertIndex + 1) % verts.Length;
+                                    tris[triIndex + 1] = (vertIndex + 2) % verts.Length;
+                                    tris[triIndex + 2] = (vertIndex + 0) % verts.Length;
+
+                                    tris[triIndex + 3] = (vertIndex + 1) % verts.Length;
+                                    tris[triIndex + 4] = (vertIndex + 3) % verts.Length;
+                                    tris[triIndex + 5] = (vertIndex + 2) % verts.Length;
+                                }
+
+                                var completinPercent = i / (float)splinePoints.Length;
+                                var v = 1 - Mathf.Abs(2 * completinPercent - 1);
+                                uvs[vertIndex + 0] = new Vector2(0, v);
+                                uvs[vertIndex + 1] = new Vector2(1, v);
+
+                                vertIndex += 2;
+                                triIndex += 6;
+                            }
+                        }
+                        return true;
+                    default:
+                        {
+                            var numArray = splinePoints.Length + (m_spline.isClosed ? 0 : -1);
+                            verts = new Vector3[numArray * 4];
+                            uvs = new Vector2[verts.Length];
+                            tris = new int[2 * numArray * 3];
+
+                            var vertIndex = 0;
+                            var triIndex = 0;
+
+                            for (int i = 0; i < numArray; i++)
+                            {
+                                var left = Vector3.Cross(splinePoints[i].up, splinePoints[i].forward);
+
+                                var offset = left * m_size.x;
+                                verts[vertIndex + 0] = splinePoints[i].position + offset;
+                                verts[vertIndex + 1] = splinePoints[i].position - offset;
+                                verts[vertIndex + 2] = splinePoints[(i + 1) % splinePoints.Length].position + offset;
+                                verts[vertIndex + 3] = splinePoints[(i + 1) % splinePoints.Length].position - offset;
+
+                                if (i < splinePoints.Length - 1 || m_spline.isClosed)
+                                {
+                                    tris[triIndex + 0] = (vertIndex + 1) % verts.Length;
+                                    tris[triIndex + 1] = (vertIndex + 2) % verts.Length;
+                                    tris[triIndex + 2] = (vertIndex + 0) % verts.Length;
+
+                                    tris[triIndex + 3] = (vertIndex + 1) % verts.Length;
+                                    tris[triIndex + 4] = (vertIndex + 3) % verts.Length;
+                                    tris[triIndex + 5] = (vertIndex + 2) % verts.Length;
+                                }
+
+                                var completinPercent = i / (float)splinePoints.Length;
+                                var v = 1 - Mathf.Abs(2 * completinPercent - 1);
+                                uvs[vertIndex + 0] = new Vector2(0, v);
+                                uvs[vertIndex + 1] = new Vector2(1, v);
+
+                                completinPercent = (i + 1) % splinePoints.Length / (float)splinePoints.Length;
+                                v = 1 - Mathf.Abs(2 * completinPercent - 1);
+                                uvs[vertIndex + 0] = new Vector2(0, v);
+                                uvs[vertIndex + 1] = new Vector2(1, v);
+
+                                vertIndex += 4;
+                                triIndex += 6;
+                            }
+                        }
+                        return true;
+                }
+            }
+
+            return false;
         }
 
         public virtual void RequestAutoUpdate()
         {
             if (autoUpdate)
             {
-                UpdateWithCurrentSpline();
+                Execute();
             }
         }
 
-        public virtual void UpdateWithCurrentSpline()
+        public virtual void Execute()
         {
 
         }
@@ -246,37 +273,61 @@ namespace TLab.Spline
 
             m_gizmoMat.SetColor("_Color", Color.green);
 
-            if (spline.CalculateEvenlySpacedPoints(out var points, m_space))
+            if (GeneratePlaneAlongToSpline(m_zUp, m_spacing, m_arrayMode, out var splinePoints, out var verts, out var uvs, out var tris))
             {
-                GeneratePlaneAlongToSpline(points, m_spline.isClosed, m_arrayMode, out var verts, out var uvs, out var tris);
-
                 m_gizmoMat.SetPass(0);
 
                 GL.PushMatrix();
 
-                for (int i = 0; i < tris.Length; i += 3)
+                foreach (var range in m_ranges)
                 {
-                    var corners = new Vector3[3];
-                    corners[0] = verts[tris[i + 0]];
-                    corners[1] = verts[tris[i + 1]];
-                    corners[2] = verts[tris[i + 2]];
+                    var offset = 6;
 
-                    transform.TransformPoints(corners, corners);
+                    for (int i = (int)(range.x * tris.Length / offset); i < (int)(range.y * tris.Length / offset); i += (1 + (int)skip))
+                    {
+                        var corners = new Vector3[3];
+                        corners[0] = verts[tris[i * offset + 0]];
+                        corners[1] = verts[tris[i * offset + 1]];
+                        corners[2] = verts[tris[i * offset + 2]];
 
-                    GL.Begin(GL.LINES);
-                    GL.Vertex3(corners[0].x, corners[0].y, corners[0].z);
-                    GL.Vertex3(corners[1].x, corners[1].y, corners[1].z);
-                    GL.End();
+                        transform.TransformPoints(corners, corners);
 
-                    GL.Begin(GL.LINES);
-                    GL.Vertex3(corners[1].x, corners[1].y, corners[1].z);
-                    GL.Vertex3(corners[2].x, corners[2].y, corners[2].z);
-                    GL.End();
+                        GL.Begin(GL.LINES);
+                        GL.Vertex3(corners[0].x, corners[0].y, corners[0].z);
+                        GL.Vertex3(corners[1].x, corners[1].y, corners[1].z);
+                        GL.End();
 
-                    GL.Begin(GL.LINES);
-                    GL.Vertex3(corners[2].x, corners[2].y, corners[2].z);
-                    GL.Vertex3(corners[0].x, corners[0].y, corners[0].z);
-                    GL.End();
+                        GL.Begin(GL.LINES);
+                        GL.Vertex3(corners[1].x, corners[1].y, corners[1].z);
+                        GL.Vertex3(corners[2].x, corners[2].y, corners[2].z);
+                        GL.End();
+
+                        GL.Begin(GL.LINES);
+                        GL.Vertex3(corners[2].x, corners[2].y, corners[2].z);
+                        GL.Vertex3(corners[0].x, corners[0].y, corners[0].z);
+                        GL.End();
+
+                        corners[0] = verts[tris[i * offset + 3]];
+                        corners[1] = verts[tris[i * offset + 4]];
+                        corners[2] = verts[tris[i * offset + 5]];
+
+                        transform.TransformPoints(corners, corners);
+
+                        GL.Begin(GL.LINES);
+                        GL.Vertex3(corners[0].x, corners[0].y, corners[0].z);
+                        GL.Vertex3(corners[1].x, corners[1].y, corners[1].z);
+                        GL.End();
+
+                        GL.Begin(GL.LINES);
+                        GL.Vertex3(corners[1].x, corners[1].y, corners[1].z);
+                        GL.Vertex3(corners[2].x, corners[2].y, corners[2].z);
+                        GL.End();
+
+                        GL.Begin(GL.LINES);
+                        GL.Vertex3(corners[2].x, corners[2].y, corners[2].z);
+                        GL.Vertex3(corners[0].x, corners[0].y, corners[0].z);
+                        GL.End();
+                    }
                 }
 
                 GL.PopMatrix();

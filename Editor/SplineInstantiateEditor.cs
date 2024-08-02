@@ -39,13 +39,13 @@ namespace TLab.Spline.Editor
 
             DrawProperty("m_" + nameof(m_base.items));
             DrawProperty("m_" + nameof(m_base.zUp));
-            DrawProperty("m_" + nameof(m_base.space));
 
             DrawProperty("m_" + nameof(m_base.skip));
+            DrawProperty("m_" + nameof(m_base.spacing));
             DrawProperty("m_" + nameof(m_base.slideOffset));
 
             DrawProperty("m_" + nameof(m_base.scale));
-            DrawMinMaxProperty("m_" + nameof(m_base.range), "Range");
+            DrawMinMaxProperty("m_" + nameof(m_base.ranges), "Ranges");
 
             EditorGUILayout.Space();
 
