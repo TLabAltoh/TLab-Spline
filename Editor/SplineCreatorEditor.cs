@@ -27,7 +27,7 @@ namespace TLab.Spline.Editor
             bool isClosed = GUILayout.Toggle(spline.isClosed, "Closed");
             if (isClosed != spline.isClosed)
             {
-                Undo.RecordObject(m_instance, "Toggle closed");
+                Undo.RecordObject(spline, "Toggle closed");
                 spline.isClosed = isClosed;
             }
 
@@ -36,7 +36,7 @@ namespace TLab.Spline.Editor
                 bool autoSetControlPoints = GUILayout.Toggle(spline.autoSetControlPoints, "Auto set control points");
                 if (autoSetControlPoints != spline.autoSetControlPoints)
                 {
-                    Undo.RecordObject(m_instance, "Toggle auto set controls");
+                    Undo.RecordObject(spline, "Toggle auto set controls");
                     spline.autoSetControlPoints = autoSetControlPoints;
                 }
             }
@@ -87,7 +87,7 @@ namespace TLab.Spline.Editor
 
                     if (Physics.Raycast(mousePos, out hit, 100.0f))
                     {
-                        Undo.RecordObject(m_instance, "Add segment");
+                        Undo.RecordObject(spline, "Add segment");
                         spline.AddSegment(hit.point);
                     }
                 }
@@ -113,7 +113,7 @@ namespace TLab.Spline.Editor
 
                     if (closestAnchorIndex != -1)
                     {
-                        Undo.RecordObject(m_instance, "Delete Segment");
+                        Undo.RecordObject(spline, "Delete Segment");
                         spline.DeleteSegment(closestAnchorIndex);
                     }
                 }
@@ -151,7 +151,7 @@ namespace TLab.Spline.Editor
                     {
                         Vector3[] points = spline.GetPointInSegment(SelectedSegmentIndex);
                         Vector3 bezierPosition = Bezier.EvaluateCubic(points[0], points[1], points[2], points[3], lerpValue);
-                        Undo.RecordObject(m_instance, "Split segment");
+                        Undo.RecordObject(spline, "Split segment");
                         spline.SplitSegment(bezierPosition, SelectedSegmentIndex);
                     }
                 }
@@ -215,7 +215,7 @@ namespace TLab.Spline.Editor
 
                     if (spline[i] != newPos)
                     {
-                        Undo.RecordObject(m_instance, "Move point");
+                        Undo.RecordObject(spline, "Move point");
                         spline.MovePoint(i, newPos);
                     }
                 }

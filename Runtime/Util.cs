@@ -9,6 +9,22 @@ namespace TLab.Spline.Util
         {
             return @params[Random.Range(0, @params.Count)];
         }
+
+        public static void RemoveComponent<T>(this GameObject go) where T : Component
+        {
+            var tmp = go.GetComponent<T>();
+            if (tmp)
+                Object.DestroyImmediate(tmp);
+        }
+
+        public static T GetAddComponent<T>(this GameObject go) where T : Component
+        {
+            var tmp = go.GetComponent<T>();
+            if (!tmp)
+                tmp = go.AddComponent<T>();
+
+            return tmp;
+        }
     }
 
     public static class CSUtil
