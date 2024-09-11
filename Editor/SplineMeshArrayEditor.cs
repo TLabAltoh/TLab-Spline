@@ -32,8 +32,8 @@ namespace TLab.Spline.Editor
 
         protected override void DrawCustomProp()
         {
-            DrawProperty("m_" + nameof(m_instance.meshElement));
-            DrawProperty("m_" + nameof(m_instance.meshHolder));
+            DrawProperty("m_" + nameof(m_instance.element));
+            DrawProperty("m_" + nameof(m_instance.container));
             DrawProperty("m_" + nameof(m_instance.collision));
         }
 

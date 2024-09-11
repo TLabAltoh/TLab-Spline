@@ -7,34 +7,34 @@ namespace TLab.Spline
     public class SplineMeshArray : SplinePlaneArray
     {
         [Header("Array Mesh")]
-        [SerializeField] protected MeshElement m_meshElement;
-        [SerializeField] protected GameObject m_meshHolder;
+        [SerializeField] protected MeshElement m_element;
+        [SerializeField] protected MeshContainer m_container;
         [SerializeField] protected bool m_collision = false;
 
         private string THIS_NAME => "[" + this.GetType() + "] ";
 
-        public MeshElement meshElement
+        public MeshElement element
         {
-            get => m_meshElement;
+            get => m_element;
             set
             {
-                if (m_meshElement != value)
+                if (m_element != value)
                 {
-                    m_meshElement = value;
+                    m_element = value;
 
                     RequestAutoUpdate();
                 }
             }
         }
 
-        public GameObject meshHolder
+        public MeshContainer container
         {
-            get => m_meshHolder;
+            get => m_container;
             set
             {
-                if (m_meshHolder != value)
+                if (m_container != value)
                 {
-                    m_meshHolder = value;
+                    m_container = value;
 
                     RequestAutoUpdate();
                 }
@@ -57,14 +57,14 @@ namespace TLab.Spline
 
         public void Export()
         {
-            var go = new GameObject(m_meshHolder.name + " (Export)");
+            var go = new GameObject(m_container.name + " (Export)");
             go.transform.localPosition = transform.localPosition;
             go.transform.localRotation = transform.localRotation;
             go.transform.localScale = transform.localScale;
             go.transform.parent = transform.parent;
-            go.AddComponent<MeshFilter>().sharedMesh = m_meshHolder.GetComponent<MeshFilter>().sharedMesh;
-            go.AddComponent<MeshCollider>().sharedMesh = m_meshHolder.GetComponent<MeshCollider>().sharedMesh;
-            go.AddComponent<MeshRenderer>().sharedMaterial = m_meshHolder.GetComponent<MeshRenderer>().sharedMaterial;
+            go.AddComponent<MeshFilter>().sharedMesh = m_container.GetComponent<MeshFilter>().sharedMesh;
+            go.AddComponent<MeshCollider>().sharedMesh = m_container.GetComponent<MeshCollider>().sharedMesh;
+            go.AddComponent<MeshRenderer>().sharedMaterial = m_container.GetComponent<MeshRenderer>().sharedMaterial;
             go.GetComponent<MeshRenderer>().sharedMaterial.mainTextureScale = new Vector2(1, 1);
         }
 
@@ -72,13 +72,19 @@ namespace TLab.Spline
         {
             if (!m_spline)
             {
-                Debug.LogError(THIS_NAME + "spline is null !");
+                Debug.LogError(THIS_NAME + "Spline is null !");
                 return;
             }
 
-            if (!m_meshElement)
+            if (!m_element)
             {
-                Debug.LogError(THIS_NAME + "mesh element is null !");
+                Debug.LogError(THIS_NAME + "MeshElement is null !");
+                return;
+            }
+
+            if (!m_container)
+            {
+                Debug.LogError(THIS_NAME + "MeshContainer is null !");
                 return;
             }
 
@@ -98,17 +104,13 @@ namespace TLab.Spline
             var combinedMesh = new Mesh();
             combinedMesh.CombineMeshes(combines.ToArray());
 
-            var meshFilter = m_meshHolder.GetComponent<MeshFilter>();
-            if (meshFilter)
-                meshFilter.sharedMesh = combinedMesh;
-
-            var meshCollider = m_meshHolder.GetComponent<MeshCollider>();
-            if (meshCollider)
-                meshCollider.sharedMesh = m_collision && (combinedMesh != null) ? combinedMesh : null;
+            m_container.mesh = combinedMesh;
+            m_container.collision = m_collision;
+            m_container.colliderMesh = m_collision && (combinedMesh != null) ? combinedMesh : null;
 
 #if UNITY_EDITOR
             UnityEditor.EditorUtility.SetDirty(this);
-            UnityEditor.EditorUtility.SetDirty(m_meshHolder);
+            UnityEditor.EditorUtility.SetDirty(m_container);
 #endif
         }
 
@@ -116,8 +118,8 @@ namespace TLab.Spline
         {
             if (GeneratePlaneAlongToSpline(m_zUp, m_spacing, m_arrayMode, out var splinePoints, out var planeVerts, out var planeUVs, out var planeTris))
             {
-                m_meshElement.GetMesh(out var srcMesh);
-                m_meshElement.GetBounds(out var bounds);
+                m_element.GetMesh(out var srcMesh);
+                m_element.GetBounds(out var bounds);
 
                 var srcVerts = srcMesh.vertices;
                 var srcUvs = srcMesh.uv;
