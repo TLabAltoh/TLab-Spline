@@ -9,21 +9,34 @@ namespace TLab.Spline
 
         public enum HandleType
         {
-            POSITION,
-            FREE_MOVE
+            Position,
+            FreeMove
         };
 
-        [Header("Anchor Handle Settings")]
-        public Color anchorCol = Color.red;
-        public float anchorDiameter = 0.1f;
-        public HandleType anchorHandle = HandleType.POSITION;
+        [System.Serializable]
+        public class HandleSettings
+        {
+            public Color col;
+            public float diameter;
+            public HandleType handleType;
 
-        [Header("Control Handle Settings")]
-        public Color controlCol = Color.white;
-        public float controlDiameter = 0.75f;
-        public HandleType controlHandle = HandleType.FREE_MOVE;
+            public HandleSettings(Color col, float diameter, HandleType handleType)
+            {
+                this.col = col;
+                this.diameter = diameter;
+                this.handleType = handleType;
+            }
 
-        [Header("Other Settings")]
+            public HandleSettings()
+            {
+
+            }
+        }
+
+        public HandleSettings anchor = new HandleSettings(Color.red, 1.5f, HandleType.Position);
+        public HandleSettings control = new HandleSettings(Color.white, 1.5f, HandleType.FreeMove);
+
+        [Header("Options")]
         public bool displayControlPoints = true;
         public Color segmentCol = Color.green;
 
