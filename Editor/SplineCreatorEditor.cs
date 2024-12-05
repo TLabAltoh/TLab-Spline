@@ -190,23 +190,23 @@ namespace TLab.Spline.Editor
 
                     if (i % 3 == 0)
                     {
-                        handleType = m_instance.anchorHandle;
-                        handleSize = m_instance.anchorDiameter;
-                        Handles.color = m_instance.anchorCol;
+                        handleType = m_instance.anchor.handleType;
+                        handleSize = m_instance.anchor.diameter;
+                        Handles.color = m_instance.anchor.col;
                     }
                     else
                     {
-                        handleType = m_instance.controlHandle;
-                        handleSize = m_instance.controlDiameter;
-                        Handles.color = m_instance.controlCol;
+                        handleType = m_instance.control.handleType;
+                        handleSize = m_instance.control.diameter;
+                        Handles.color = m_instance.control.col;
                     }
 
                     switch (handleType)
                     {
-                        case SplineCreator.HandleType.POSITION:
+                        case SplineCreator.HandleType.Position:
                             newPos = Handles.PositionHandle(TransformPoint(spline[i]), Quaternion.identity);
                             break;
-                        case SplineCreator.HandleType.FREE_MOVE:
+                        case SplineCreator.HandleType.FreeMove:
                             newPos = Handles.FreeMoveHandle(TransformPoint(spline[i]), handleSize, Vector3.zero, Handles.CylinderHandleCap);
                             break;
                     }
