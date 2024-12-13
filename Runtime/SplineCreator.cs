@@ -16,13 +16,13 @@ namespace TLab.Spline
         [System.Serializable]
         public class HandleSettings
         {
-            public Color col;
+            public Color color;
             public float diameter;
             public HandleType handleType;
 
-            public HandleSettings(Color col, float diameter, HandleType handleType)
+            public HandleSettings(Color color, float diameter, HandleType handleType)
             {
-                this.col = col;
+                this.color = color;
                 this.diameter = diameter;
                 this.handleType = handleType;
             }
@@ -38,12 +38,17 @@ namespace TLab.Spline
 
         [Header("Options")]
         public bool displayControlPoints = true;
-        public Color segmentCol = Color.green;
+        public Color segmentColor = Color.green;
+
+        [Header("Create New Options")]
+        public Primitive.PrimitiveType initPrimitiveType;
+        [Min(0)] public float initSize = 1f;
+        [Min(2)] public int initSegmentNum = 5;
 
         public void CreatePath()
         {
             spline = GetComponent<Spline>();
-            spline.Init(transform.position);
+            spline.Init(initPrimitiveType, transform.position, initSegmentNum, initSize);
         }
 
         private void Reset()

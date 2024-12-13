@@ -156,7 +156,7 @@ namespace TLab.Spline
                             verts = new Vector3[splinePoints.Length * 2];
                             uvs = new Vector2[verts.Length];
 
-                            var numTris = (splinePoints.Length - 1) + (m_spline.isClosed ? 1 : 0);
+                            var numTris = (splinePoints.Length - 1) + (m_spline.close ? 1 : 0);
                             tris = new int[2 * numTris * 3];
 
                             var vertIndex = 0;
@@ -177,7 +177,7 @@ namespace TLab.Spline
                                  *    0 -----ÅE----- 1
                                  */
 
-                                if (i < splinePoints.Length - 1 || m_spline.isClosed)
+                                if (i < splinePoints.Length - 1 || m_spline.close)
                                 {
                                     tris[triIndex + 0] = (vertIndex + 1) % verts.Length;
                                     tris[triIndex + 1] = (vertIndex + 2) % verts.Length;
@@ -200,7 +200,7 @@ namespace TLab.Spline
                         return true;
                     default:
                         {
-                            var numArray = splinePoints.Length + (m_spline.isClosed ? 0 : -1);
+                            var numArray = splinePoints.Length + (m_spline.close ? 0 : -1);
                             verts = new Vector3[numArray * 4];
                             uvs = new Vector2[verts.Length];
                             tris = new int[2 * numArray * 3];
@@ -218,7 +218,7 @@ namespace TLab.Spline
                                 verts[vertIndex + 2] = splinePoints[(i + 1) % splinePoints.Length].position + offset;
                                 verts[vertIndex + 3] = splinePoints[(i + 1) % splinePoints.Length].position - offset;
 
-                                if (i < splinePoints.Length - 1 || m_spline.isClosed)
+                                if (i < splinePoints.Length - 1 || m_spline.close)
                                 {
                                     tris[triIndex + 0] = (vertIndex + 1) % verts.Length;
                                     tris[triIndex + 1] = (vertIndex + 2) % verts.Length;

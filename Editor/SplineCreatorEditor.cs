@@ -18,33 +18,31 @@ namespace TLab.Spline.Editor
 
             EditorGUI.BeginChangeCheck();
 
-            if (GUILayout.Button("Create new"))
+            if (GUILayout.Button("Create New"))
             {
-                Undo.RecordObject(m_instance, "Create new");
+                Undo.RecordObject(m_instance, "Create New");
                 m_instance.CreatePath();
             }
 
-            bool isClosed = GUILayout.Toggle(spline.isClosed, "Closed");
-            if (isClosed != spline.isClosed)
+            bool close = GUILayout.Toggle(spline.close, "Close");
+            if (close != spline.close)
             {
-                Undo.RecordObject(spline, "Toggle closed");
-                spline.isClosed = isClosed;
+                Undo.RecordObject(spline, "Toggle Close");
+                spline.close = close;
             }
 
-            if (!(spline.numSegments == 2 && spline.isClosed))
+            if (!(spline.numSegments == 2 && spline.close))
             {
-                bool autoSetControlPoints = GUILayout.Toggle(spline.autoSetControlPoints, "Auto set control points");
-                if (autoSetControlPoints != spline.autoSetControlPoints)
+                var editMode = (Spline.EditMode)EditorGUILayout.EnumPopup("Edit Mode", spline.editMode);
+                if (editMode != spline.editMode)
                 {
-                    Undo.RecordObject(spline, "Toggle auto set controls");
-                    spline.autoSetControlPoints = autoSetControlPoints;
+                    Undo.RecordObject(spline, "Switch Edit Mode");
+                    spline.editMode = editMode;
                 }
             }
 
             if (EditorGUI.EndChangeCheck())
-            {
                 SceneView.RepaintAll();
-            }
         }
 
         private void OnSceneGUI()
@@ -53,25 +51,13 @@ namespace TLab.Spline.Editor
             Draw();
         }
 
-        private Vector3 TransformPoint(Vector3 point)
-        {
-            return m_instance.transform.TransformPoint(point);
-        }
+        private Vector3 TransformPoint(Vector3 point) => m_instance.transform.TransformPoint(point);
 
-        private Vector3 InverseTransformPoint(Vector3 point)
-        {
-            return m_instance.transform.InverseTransformPoint(point);
-        }
+        private Vector3 InverseTransformPoint(Vector3 point) => m_instance.transform.InverseTransformPoint(point);
 
-        private void TransformPoints(System.Span<Vector3> points, System.Span<Vector3> transformedPoints)
-        {
-            m_instance.transform.TransformPoints(points, transformedPoints);
-        }
+        private void TransformPoints(System.Span<Vector3> points, System.Span<Vector3> transformedPoints) => m_instance.transform.TransformPoints(points, transformedPoints);
 
-        private void InverseTransformPoints(System.Span<Vector3> points, System.Span<Vector3> transformedPoints)
-        {
-            m_instance.transform.InverseTransformPoints(points, transformedPoints);
-        }
+        private void InverseTransformPoints(System.Span<Vector3> points, System.Span<Vector3> transformedPoints) => m_instance.transform.InverseTransformPoints(points, transformedPoints);
 
         private void Input()
         {
@@ -80,20 +66,20 @@ namespace TLab.Spline.Editor
             if (guiEvent.type == EventType.KeyDown)
             {
                 // add segment
-                if (guiEvent.keyCode == KeyCode.A && !spline.isClosed)
+                if (guiEvent.keyCode == KeyCode.A && !spline.close)
                 {
                     var mousePos = HandleUtility.GUIPointToWorldRay(guiEvent.mousePosition);
                     RaycastHit hit;
 
                     if (Physics.Raycast(mousePos, out hit, 100.0f))
                     {
-                        Undo.RecordObject(spline, "Add segment");
+                        Undo.RecordObject(spline, "Add Segment");
                         spline.AddSegment(hit.point);
                     }
                 }
 
                 // delete segment
-                if (guiEvent.keyCode == KeyCode.D && !(spline.numSegments == 3 && spline.isClosed))
+                if (guiEvent.keyCode == KeyCode.D && !(spline.numSegments == 3 && spline.close))
                 {
                     var minDstToAnchor = 20.0f;
                     var closestAnchorIndex = -1;
@@ -151,7 +137,7 @@ namespace TLab.Spline.Editor
                     {
                         Vector3[] points = spline.GetPointInSegment(SelectedSegmentIndex);
                         Vector3 bezierPosition = Bezier.EvaluateCubic(points[0], points[1], points[2], points[3], lerpValue);
-                        Undo.RecordObject(spline, "Split segment");
+                        Undo.RecordObject(spline, "Split Segment");
                         spline.SplitSegment(bezierPosition, SelectedSegmentIndex);
                     }
                 }
@@ -174,7 +160,7 @@ namespace TLab.Spline.Editor
                     Handles.DrawLine(points[2], points[3]);
                 }
 
-                Handles.DrawBezier(points[0], points[3], points[1], points[2], m_instance.segmentCol, null, 2);
+                Handles.DrawBezier(points[0], points[3], points[1], points[2], m_instance.segmentColor, null, 2);
             }
 
             Handles.color = Color.red;
@@ -192,13 +178,13 @@ namespace TLab.Spline.Editor
                     {
                         handleType = m_instance.anchor.handleType;
                         handleSize = m_instance.anchor.diameter;
-                        Handles.color = m_instance.anchor.col;
+                        Handles.color = m_instance.anchor.color;
                     }
                     else
                     {
                         handleType = m_instance.control.handleType;
                         handleSize = m_instance.control.diameter;
-                        Handles.color = m_instance.control.col;
+                        Handles.color = m_instance.control.color;
                     }
 
                     switch (handleType)
@@ -215,7 +201,7 @@ namespace TLab.Spline.Editor
 
                     if (spline[i] != newPos)
                     {
-                        Undo.RecordObject(spline, "Move point");
+                        Undo.RecordObject(spline, "Move Point");
                         spline.MovePoint(i, newPos);
                     }
                 }
@@ -227,9 +213,7 @@ namespace TLab.Spline.Editor
             m_instance = (SplineCreator)target;
 
             if (m_instance.spline == null)
-            {
                 m_instance.CreatePath();
-            }
         }
     }
 }
