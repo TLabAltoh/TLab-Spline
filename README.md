@@ -42,6 +42,9 @@ https://github.com/TLabAltoh/TLab-Spline.git#upm
 | D | Deletion of segment |
 | S | Insert segment |
 
+### TODO
+- support Undo for ```SplineCreator```'s Editor GUI Action
+
 ### Reference
 - [Sebastian Lague](https://www.youtube.com/playlist?list=PLFt_AvWsXl0d8aDaovNztYf6iTChHzrHP)
 - [Road Texture](https://www.freepik.com/free-photo/lines-traffic-paved-roads-background_3738059.htm)
