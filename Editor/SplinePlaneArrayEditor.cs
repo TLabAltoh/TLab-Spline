@@ -28,9 +28,7 @@ namespace TLab.Spline.Editor
             var width = GUILayout.Width(Screen.width / 3);
 
             if (GUILayout.Button("Update", width))
-            {
                 m_base.Execute();
-            }
 
             EditorGUILayout.EndHorizontal();
         }
@@ -69,9 +67,7 @@ namespace TLab.Spline.Editor
             SerializedProperty prop = serializedObject.FindProperty(name);
 
             if (m_ranges == null)
-            {
                 m_ranges = new ReorderableList(serializedObject, prop);
-            }
 
             EditorGUILayout.BeginHorizontal();
 
@@ -84,16 +80,12 @@ namespace TLab.Spline.Editor
             if (!m_toggle)
             {
                 if (GUILayout.Button(EditorGUIUtility.TrIconContent("animationvisibilitytoggleon"), width))
-                {
                     m_toggle = true;
-                }
             }
             else
             {
                 if (GUILayout.Button(EditorGUIUtility.TrIconContent("animationvisibilitytoggleoff"), width))
-                {
                     m_toggle = false;
-                }
             }
 
             EditorGUILayout.EndHorizontal();
@@ -139,9 +131,7 @@ namespace TLab.Spline.Editor
             m_ranges.headerHeight = 0f;
 
             if (m_toggle)
-            {
                 m_ranges.DoLayoutList();
-            }
         }
 
         protected virtual void DrawProperty(string name)
@@ -151,9 +141,6 @@ namespace TLab.Spline.Editor
             EditorGUILayout.PropertyField(prop);
         }
 
-        protected virtual void OnEnable()
-        {
-            m_base = target as SplinePlaneArray;
-        }
+        protected virtual void OnEnable() => m_base = target as SplinePlaneArray;
     }
 }
