@@ -36,11 +36,14 @@ namespace TLab.Spline
 
                     if (m_close)
                     {
-                        // anchor point added at the path end
-                        m_points.Add(m_points[m_points.Count - 1] * 2 - m_points[m_points.Count - 2]);
+                        if (m_points.Count % 3 != 0)
+                        {
+                            // anchor point added at the path end
+                            m_points.Add(m_points[m_points.Count - 1] * 2 - m_points[m_points.Count - 2]);
 
-                        // add anchor point at the path beginning
-                        m_points.Add(m_points[0] * 2 - m_points[1]);
+                            // add anchor point at the path beginning
+                            m_points.Add(m_points[0] * 2 - m_points[1]);
+                        }
 
                         if (m_editMode == EditMode.AutoSetControlPoints)
                         {
@@ -50,8 +53,11 @@ namespace TLab.Spline
                     }
                     else
                     {
-                        // remove anchor point at path end and begining.
-                        m_points.RemoveRange(m_points.Count - 2, 2);
+                        if (m_points.Count % 3 == 0)
+                        {
+                            // remove anchor point at path end and begining.
+                            m_points.RemoveRange(m_points.Count - 2, 2);
+                        }
 
                         if (m_editMode == EditMode.AutoSetControlPoints)
                             AutoSetStartAndEndControls();
