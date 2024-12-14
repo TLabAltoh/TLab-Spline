@@ -27,6 +27,13 @@ or
 git submodule add https://github.com/TLabAltoh/TLab-Spline.git
 ```
 
+### Unity Package Manager
+add package from git URL ...
+
+```
+https://github.com/TLabAltoh/TLab-Spline.git#upm
+```
+
 ### How to Edit Spline
 
 | Key | Action |
@@ -34,9 +41,6 @@ git submodule add https://github.com/TLabAltoh/TLab-Spline.git
 | A | Add segment |
 | D | Deletion of segment |
 | S | Insert segment |
-
-### TODO
-- Support upm
 
 ### Reference
 - [Sebastian Lague](https://www.youtube.com/playlist?list=PLFt_AvWsXl0d8aDaovNztYf6iTChHzrHP)
