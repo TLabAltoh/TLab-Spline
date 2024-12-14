@@ -20,16 +20,13 @@ namespace TLab.Spline
             public float diameter;
             public HandleType handleType;
 
+            public HandleSettings() { }
+
             public HandleSettings(Color color, float diameter, HandleType handleType)
             {
                 this.color = color;
                 this.diameter = diameter;
                 this.handleType = handleType;
-            }
-
-            public HandleSettings()
-            {
-
             }
         }
 
@@ -37,6 +34,7 @@ namespace TLab.Spline
         public HandleSettings control = new HandleSettings(Color.white, 1.5f, HandleType.FreeMove);
 
         [Header("Options")]
+        public bool displayAnchorPoints = true;
         public bool displayControlPoints = true;
         public Color segmentColor = Color.green;
 
@@ -48,7 +46,7 @@ namespace TLab.Spline
         public void CreatePath()
         {
             spline = GetComponent<Spline>();
-            spline.Init(initPrimitiveType, transform.position, initSegmentNum, initSize);
+            spline.Init(initPrimitiveType, initSegmentNum, initSize);
         }
 
         private void Reset()

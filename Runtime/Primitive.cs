@@ -12,32 +12,39 @@ namespace TLab.Spline
             Polygon,
         }
 
-        public static Vector3[] Line(Vector3 center, float size = 1f)
+        public static Vector3[] Line(int numSegments, float size = 1f)
         {
             size *= 0.5f;
 
             var points = new Queue<Vector3>();
 
-            points.Enqueue(center + Vector3.left * size);
-            points.Enqueue(center + Vector3.left * size);
-            points.Enqueue(center + Vector3.left * size * -1);
-            points.Enqueue(center + Vector3.left * size * -1);
+            var delta = size / numSegments;
+
+            for (int i = 0; i <= numSegments; i++)
+            {
+                var anchor = Vector3.left * (size * -0.5f + delta * i);
+                points.Enqueue(anchor);
+                points.Enqueue(anchor);
+
+                if ((i > 0) && (i < numSegments))
+                    points.Enqueue(anchor);
+            }
 
             return points.ToArray();
         }
 
-        public static Vector3[] Circle(Vector3 center, int numPoints, float radius = 1.0f)
+        public static Vector3[] Circle(int numSegments, float radius = 1.0f)
         {
             var points = new Queue<Vector3>();
-            var controlSize = Mathf.Tan(Mathf.PI / (2 * numPoints)) * 4 / 3 * radius;
-            var angleOffset = Mathf.PI / 2 + ((numPoints % 2 == 0) ? Mathf.PI / numPoints : 0);
-            for (var i = 0; i < numPoints; i++)
+            var controlSize = Mathf.Tan(Mathf.PI / (2 * numSegments)) * 4 / 3 * radius;
+            var angleOffset = Mathf.PI / 2 + ((numSegments % 2 == 0) ? Mathf.PI / numSegments : 0);
+            for (var i = 0; i < numSegments; i++)
             {
-                var theta = Mathf.PI * 2 * i / numPoints + angleOffset;
+                var theta = Mathf.PI * 2 * i / numSegments + angleOffset;
                 var cos = Mathf.Cos(theta);
                 var sin = Mathf.Sin(theta);
 
-                var anchor = center + new Vector3(cos, 0, sin) * radius * -1;
+                var anchor = new Vector3(cos, 0, sin) * radius * -1;
 
                 points.Enqueue(anchor + new Vector3(sin, 0, -cos) * controlSize * -1);
                 points.Enqueue(anchor);
@@ -49,15 +56,15 @@ namespace TLab.Spline
             return points.ToArray();
         }
 
-        public static Vector3[] Polygon(Vector3 center, int numPoints, float radius = 1f)
+        public static Vector3[] Polygon(int numSegments, float radius = 1f)
         {
             var points = new Queue<Vector3>();
-            var angleOffset = Mathf.PI / 2 + ((numPoints % 2 == 0) ? Mathf.PI / numPoints : 0);
-            for (var i = 0; i < numPoints; i++)
+            var angleOffset = Mathf.PI / 2 + ((numSegments % 2 == 0) ? Mathf.PI / numSegments : 0);
+            for (var i = 0; i < numSegments; i++)
             {
-                var theta = Mathf.PI * 2 * i / numPoints + angleOffset;
+                var theta = Mathf.PI * 2 * i / numSegments + angleOffset;
 
-                var anchor = center + new Vector3(Mathf.Cos(theta), 0, Mathf.Sin(theta)) * radius;
+                var anchor = new Vector3(Mathf.Cos(theta), 0, Mathf.Sin(theta)) * radius;
 
                 points.Enqueue(anchor);
                 points.Enqueue(anchor);
