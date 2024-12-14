@@ -75,21 +75,21 @@ namespace TLab.Spline
             }
         }
 
-        public void Init(Primitive.PrimitiveType primitiveType, Vector3 center, int numPoints, float size = 1.0f)
+        public void Init(Primitive.PrimitiveType primitiveType, int numSegments, float size = 1.0f)
         {
             switch (primitiveType)
             {
                 case Primitive.PrimitiveType.Line:
                     m_close = false;
-                    m_points = Primitive.Line(center, size).ToList();
+                    m_points = Primitive.Line(numSegments, size).ToList();
                     break;
                 case Primitive.PrimitiveType.Circle:
                     m_close = true;
-                    m_points = Primitive.Circle(center, numPoints, size * 0.5f).ToList();
+                    m_points = Primitive.Circle(numSegments, size * 0.5f).ToList();
                     break;
                 case Primitive.PrimitiveType.Polygon:
                     m_close = true;
-                    m_points = Primitive.Polygon(center, numPoints, size * 0.5f).ToList();
+                    m_points = Primitive.Polygon(numSegments, size * 0.5f).ToList();
                     break;
             }
         }
@@ -231,7 +231,7 @@ namespace TLab.Spline
             }
 
             var evenlySpacedPoints = new List<Vector3>();
-            evenlySpacedPoints.Add(m_points[0]);
+            evenlySpacedPoints.Add(transform.position + m_points[0]);
             var previousPoint = m_points[0];
             var dstSinceLastEvenPoint = 0.0f;
 
@@ -255,7 +255,7 @@ namespace TLab.Spline
                     {
                         var overshootDst = dstSinceLastEvenPoint - spacing;
                         var newEvenlySpacedPoint = pointOnCurve + (previousPoint - pointOnCurve).normalized * overshootDst;
-                        evenlySpacedPoints.Add(newEvenlySpacedPoint);
+                        evenlySpacedPoints.Add(transform.position + newEvenlySpacedPoint);
                         dstSinceLastEvenPoint = overshootDst;
                         previousPoint = newEvenlySpacedPoint;
                     }

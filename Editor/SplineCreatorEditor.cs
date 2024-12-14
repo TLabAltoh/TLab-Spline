@@ -167,43 +167,46 @@ namespace TLab.Spline.Editor
 
             for (int i = 0; i < spline.numPoints; i++)
             {
-                if (i % 3 == 0 || m_instance.displayControlPoints)
+                if ((i % 3 == 0) && !m_instance.displayAnchorPoints)
+                    continue;
+
+                if ((i % 3 != 0) && !m_instance.displayControlPoints)
+                    continue;
+
+                var newPos = spline[i];
+
+                SplineCreator.HandleType handleType;
+                float handleSize = 0;
+
+                if (i % 3 == 0)
                 {
-                    var newPos = spline[i];
+                    handleType = m_instance.anchor.handleType;
+                    handleSize = m_instance.anchor.diameter;
+                    Handles.color = m_instance.anchor.color;
+                }
+                else
+                {
+                    handleType = m_instance.control.handleType;
+                    handleSize = m_instance.control.diameter;
+                    Handles.color = m_instance.control.color;
+                }
 
-                    SplineCreator.HandleType handleType;
-                    float handleSize = 0;
+                switch (handleType)
+                {
+                    case SplineCreator.HandleType.Position:
+                        newPos = Handles.PositionHandle(TransformPoint(spline[i]), Quaternion.identity);
+                        break;
+                    case SplineCreator.HandleType.FreeMove:
+                        newPos = Handles.FreeMoveHandle(TransformPoint(spline[i]), handleSize, Vector3.zero, Handles.CylinderHandleCap);
+                        break;
+                }
 
-                    if (i % 3 == 0)
-                    {
-                        handleType = m_instance.anchor.handleType;
-                        handleSize = m_instance.anchor.diameter;
-                        Handles.color = m_instance.anchor.color;
-                    }
-                    else
-                    {
-                        handleType = m_instance.control.handleType;
-                        handleSize = m_instance.control.diameter;
-                        Handles.color = m_instance.control.color;
-                    }
+                newPos = InverseTransformPoint(newPos);
 
-                    switch (handleType)
-                    {
-                        case SplineCreator.HandleType.Position:
-                            newPos = Handles.PositionHandle(TransformPoint(spline[i]), Quaternion.identity);
-                            break;
-                        case SplineCreator.HandleType.FreeMove:
-                            newPos = Handles.FreeMoveHandle(TransformPoint(spline[i]), handleSize, Vector3.zero, Handles.CylinderHandleCap);
-                            break;
-                    }
-
-                    newPos = InverseTransformPoint(newPos);
-
-                    if (spline[i] != newPos)
-                    {
-                        Undo.RecordObject(spline, "Move Point");
-                        spline.MovePoint(i, newPos);
-                    }
+                if (spline[i] != newPos)
+                {
+                    Undo.RecordObject(spline, "Move Point");
+                    spline.MovePoint(i, newPos);
                 }
             }
         }
