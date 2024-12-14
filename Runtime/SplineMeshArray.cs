@@ -55,9 +55,25 @@ namespace TLab.Spline
             }
         }
 
+        public void ClearMesh()
+        {
+            if (!m_container)
+            {
+                Debug.LogError(THIS_NAME + $"{nameof(MeshContainer)} is null !");
+                return;
+            }
+
+            m_container.Clear();
+
+#if UNITY_EDITOR
+            if (!Application.isPlaying)
+                UnityEditor.EditorUtility.SetDirty(m_container);
+#endif
+        }
+
         public void Export()
         {
-            var go = new GameObject(m_container.name + " (Export)");
+            var go = new GameObject(gameObject.name + " (Export)");
             go.transform.localPosition = transform.localPosition;
             go.transform.localRotation = transform.localRotation;
             go.transform.localScale = transform.localScale;
@@ -65,26 +81,25 @@ namespace TLab.Spline
             go.AddComponent<MeshFilter>().sharedMesh = m_container.GetComponent<MeshFilter>().sharedMesh;
             go.AddComponent<MeshCollider>().sharedMesh = m_container.GetComponent<MeshCollider>().sharedMesh;
             go.AddComponent<MeshRenderer>().sharedMaterial = m_container.GetComponent<MeshRenderer>().sharedMaterial;
-            go.GetComponent<MeshRenderer>().sharedMaterial.mainTextureScale = new Vector2(1, 1);
         }
 
         public override void Execute()
         {
             if (!m_spline)
             {
-                Debug.LogError(THIS_NAME + "Spline is null !");
+                Debug.LogError(THIS_NAME + $"{nameof(Spline)} is null !");
                 return;
             }
 
             if (!m_element)
             {
-                Debug.LogError(THIS_NAME + "MeshElement is null !");
+                Debug.LogError(THIS_NAME + $"{nameof(MeshElement)} is null !");
                 return;
             }
 
             if (!m_container)
             {
-                Debug.LogError(THIS_NAME + "MeshContainer is null !");
+                Debug.LogError(THIS_NAME + $"{nameof(MeshContainer)} is null !");
                 return;
             }
 
@@ -106,11 +121,14 @@ namespace TLab.Spline
 
             m_container.mesh = combinedMesh;
             m_container.collision = m_collision;
-            m_container.colliderMesh = m_collision && (combinedMesh != null) ? combinedMesh : null;
+            m_container.collider.sharedMesh = m_collision && (combinedMesh != null) ? combinedMesh : null;
 
 #if UNITY_EDITOR
-            UnityEditor.EditorUtility.SetDirty(this);
-            UnityEditor.EditorUtility.SetDirty(m_container);
+            if (!Application.isPlaying)
+            {
+                UnityEditor.EditorUtility.SetDirty(this);
+                UnityEditor.EditorUtility.SetDirty(m_container);
+            }
 #endif
         }
 

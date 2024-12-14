@@ -15,17 +15,16 @@ namespace TLab.Spline.Editor
         {
             EditorGUILayout.BeginHorizontal();
 
-            var width = GUILayout.Width(Screen.width / 3);
+            var width = GUILayout.Width(Screen.width / 4);
 
             if (GUILayout.Button("Update", width))
-            {
                 m_instance.Execute();
-            }
 
             if (GUILayout.Button("Export", width))
-            {
                 m_instance.Export();
-            }
+
+            if (GUILayout.Button("Clear Mesh", width))
+                m_instance.ClearMesh();
 
             EditorGUILayout.EndHorizontal();
         }
