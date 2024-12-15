@@ -11,7 +11,7 @@ Spline tool for unity.
 
 <img src="Media/image.png" width="512"></img>
 
-<video src="Media/overview.mp4" width="512"></video>
+![demo](Media/overview.mp4)
 
 ## Development Environment
 - Unity: 2022.3.11f1 (URP)  
