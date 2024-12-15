@@ -9,12 +9,13 @@ namespace TLab.Spline
 
         public enum ArrayMode
         {
-            DEFAULT,
-            NO_SPACE
+            Default,
+            NoSpace,
         };
 
         [Header("Array")]
         [SerializeField] protected ArrayMode m_arrayMode;
+        [SerializeField] protected Spline.AnchorAxis m_anchorAxis;
         [SerializeField] protected bool m_zUp = true;
         [SerializeField] protected uint m_skip = 0;
         [SerializeField, Min(0.5f)] protected float m_spacing = 0.5f;
@@ -22,8 +23,24 @@ namespace TLab.Spline
         [SerializeField] protected Vector3 m_size = new Vector3(1.0f, 1.0f, 1.0f);
         [SerializeField] protected Vector2[] m_ranges = new Vector2[1] { new Vector2(0, 1) };
 
-        [Header("Gizmo")]
-        [SerializeField] public bool drawGizmo = false;
+        [SerializeField] public GizmoSetting gizmoSetting = new GizmoSetting();
+
+        [System.Serializable]
+        public class GizmoSetting
+        {
+            public bool draw = false;
+            public Color color = Color.green;
+
+            public GizmoSetting() { }
+
+            public GizmoSetting(bool draw, Color color)
+            {
+                this.draw = draw;
+                this.color = color;
+            }
+        }
+
+        internal static readonly int PROP_COLOR = Shader.PropertyToID("_Color");
 
         protected Material m_gizmoMat;
 
@@ -49,6 +66,20 @@ namespace TLab.Spline
                 if (m_arrayMode != value)
                 {
                     m_arrayMode = value;
+
+                    RequestAutoUpdate();
+                }
+            }
+        }
+
+        public Spline.AnchorAxis anchorAxis
+        {
+            get => m_anchorAxis;
+            set
+            {
+                if (m_anchorAxis != value)
+                {
+                    m_anchorAxis = value;
 
                     RequestAutoUpdate();
                 }
@@ -141,17 +172,17 @@ namespace TLab.Spline
 
         private string THIS_NAME => "[" + this.GetType() + "] ";
 
-        protected virtual bool GeneratePlaneAlongToSpline(bool zUp, float spacing, ArrayMode arrayMode, out Spline.Point[] splinePoints, out Vector3[] verts, out Vector2[] uvs, out int[] tris)
+        protected virtual bool GeneratePlaneAlongToSpline(Spline.AnchorAxis anchorAxis, bool zUp, float spacing, ArrayMode arrayMode, out Spline.Point[] splinePoints, out Vector3[] verts, out Vector2[] uvs, out int[] tris)
         {
             verts = null;
             uvs = null;
             tris = null;
 
-            if (m_spline.GetSplinePoints(out splinePoints, zUp, spacing))
+            if (m_spline.GetSplinePoints(out splinePoints, anchorAxis, zUp, spacing))
             {
                 switch (arrayMode)
                 {
-                    case ArrayMode.NO_SPACE:
+                    case ArrayMode.NoSpace:
                         {
                             verts = new Vector3[splinePoints.Length * 2];
                             uvs = new Vector2[verts.Length];
@@ -164,7 +195,7 @@ namespace TLab.Spline
 
                             for (int i = 0; i < splinePoints.Length; i++)
                             {
-                                var left = Vector3.Cross(splinePoints[i].up, splinePoints[i].forward);
+                                var left = splinePoints[i].normal;
 
                                 var offset = left * m_size.x;
                                 verts[vertIndex + 0] = splinePoints[i].position + offset;
@@ -210,7 +241,7 @@ namespace TLab.Spline
 
                             for (int i = 0; i < numArray; i++)
                             {
-                                var left = Vector3.Cross(splinePoints[i].up, splinePoints[i].forward);
+                                var left = splinePoints[i].normal;
 
                                 var offset = left * m_size.x;
                                 verts[vertIndex + 0] = splinePoints[i].position + offset;
@@ -263,17 +294,18 @@ namespace TLab.Spline
 
         }
 
+#if UNITY_EDITOR
         protected void OnDrawGizmos()
         {
-            if (!drawGizmo || !m_spline)
+            if (!gizmoSetting.draw || !m_spline)
                 return;
 
             if (m_gizmoMat == null)
                 m_gizmoMat = new Material(Shader.Find("Unlit/Color"));
 
-            m_gizmoMat.SetColor("_Color", Color.green);
+            m_gizmoMat.SetColor(PROP_COLOR, gizmoSetting.color);
 
-            if (GeneratePlaneAlongToSpline(m_zUp, m_spacing, m_arrayMode, out var splinePoints, out var verts, out var uvs, out var tris))
+            if (GeneratePlaneAlongToSpline(m_anchorAxis, m_zUp, m_spacing, m_arrayMode, out var splinePoints, out var verts, out var uvs, out var tris))
             {
                 m_gizmoMat.SetPass(0);
 
@@ -333,5 +365,6 @@ namespace TLab.Spline
                 GL.PopMatrix();
             }
         }
+#endif
     }
 }

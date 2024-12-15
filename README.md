@@ -5,9 +5,13 @@ Spline tool for unity.
 ## Feature  
 - Instantiate Mesh / GameObject and place it along the spline
 - Edit terrain height along to spline curve
+- Apply GameObject's Transform to Curve
+- Angle offset for each anchor point
 - Curve Primitive with custom dimension (Line, Circle, Polygon)
 
 <img src="Media/image.png" width="512"></img>
+
+<video src="https://imgur.com/a/rrret1b" width="512"></video>
 
 ## Operating Environment
 - Unity: 2022.3.11f1 (URP)  
@@ -43,8 +47,11 @@ https://github.com/TLabAltoh/TLab-Spline.git#upm
 | S | Insert segment |
 
 ### TODO
-- support Undo for ```SplineCreator```'s Editor GUI Action
+- support Undo for ```SplineMeshArray```'s Editor GUI Button Action
 
 ### Reference
-- [Sebastian Lague](https://www.youtube.com/playlist?list=PLFt_AvWsXl0d8aDaovNztYf6iTChHzrHP)
-- [Road Texture](https://www.freepik.com/free-photo/lines-traffic-paved-roads-background_3738059.htm)
+#### Source Code
+- [youtube](https://www.youtube.com/playlist?list=PLFt_AvWsXl0d8aDaovNztYf6iTChHzrHP)
+- [Path Creator](https://github.com/SebLague/Path-Creator/tree/master)
+#### Assets
+- [sample's texture](https://www.freepik.com/free-photo/lines-traffic-paved-roads-background_3738059.html)

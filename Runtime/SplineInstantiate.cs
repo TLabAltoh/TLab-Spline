@@ -11,6 +11,7 @@ namespace TLab.Spline
 
         [Header("Array Instantiate")]
         [SerializeField] protected List<GameObject> m_items;
+        [SerializeField] protected Spline.AnchorAxis m_anchorAxis;
         [SerializeField] protected bool m_zUp = true;
         [SerializeField] protected uint m_skip = 0;
         [SerializeField, Min(0)] protected float m_spacing = 0.5f;
@@ -147,23 +148,23 @@ namespace TLab.Spline
             public Vector3 position;
         }
 
-        public virtual void InstantiateAlongToSpline(bool zUp, uint skip, Vector2[] ranges, float spacing, List<GameObject> items)
+        public virtual void InstantiateAlongToSpline(Spline.AnchorAxis anchorAxis, bool zUp, uint skip, Vector2[] ranges, float spacing, List<GameObject> items)
         {
-            if (m_spline.GetSplinePoints(out var splinePoints, zUp, spacing))
+            if (m_spline.GetSplinePoints(out var splinePoints, anchorAxis, zUp, spacing))
             {
                 foreach (var range in ranges)
                 {
                     for (int i = (int)(range.x * splinePoints.Length); i < (int)(range.y * splinePoints.Length); i += (1 + (int)skip))
                     {
-                        var left0 = Vector3.Cross(splinePoints[i].forward, splinePoints[i].up);
+                        var left0 = splinePoints[i].normal;
                         left0.Normalize();
 
-                        var left1 = Vector3.Cross(splinePoints[(i + 1) % splinePoints.Length].forward, splinePoints[(i + 1) % splinePoints.Length].up);
+                        var left1 = splinePoints[(i + 1) % splinePoints.Length].normal;
                         left1.Normalize();
 
                         var left = (left0 + left1) * 0.5f;
 
-                        var forward = (splinePoints[(i + 1) % splinePoints.Length].forward + splinePoints[i].forward) * 0.5f;
+                        var forward = (splinePoints[(i + 1) % splinePoints.Length].tangent + splinePoints[i].tangent) * 0.5f;
                         var up = (splinePoints[(i + 1) % splinePoints.Length].up + splinePoints[i].up) * 0.5f;
                         var position = (splinePoints[(i + 1) % splinePoints.Length].position + splinePoints[i].position) * 0.5f;
 
@@ -210,7 +211,7 @@ namespace TLab.Spline
                 return;
             }
 
-            InstantiateAlongToSpline(m_zUp, m_skip, m_ranges, m_spacing, m_items);
+            InstantiateAlongToSpline(m_anchorAxis, m_zUp, m_skip, m_ranges, m_spacing, m_items);
         }
     }
 }

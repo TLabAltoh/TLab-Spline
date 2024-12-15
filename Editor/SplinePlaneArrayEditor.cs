@@ -40,6 +40,7 @@ namespace TLab.Spline.Editor
             DrawProperty("m_" + nameof(m_base.spline));
             DrawProperty(nameof(m_base.autoUpdate));
             DrawProperty("m_" + nameof(m_base.arrayMode));
+            DrawProperty("m_" + nameof(m_base.anchorAxis));
 
             DrawProperty("m_" + nameof(m_base.zUp));
 
@@ -51,7 +52,7 @@ namespace TLab.Spline.Editor
 
             DrawMinMaxProperty("m_" + nameof(m_base.ranges), "Range");
 
-            DrawProperty(nameof(m_base.drawGizmo));
+            DrawProperty(nameof(m_base.gizmoSetting));
 
             DrawCustomProp();
 
@@ -94,16 +95,16 @@ namespace TLab.Spline.Editor
             {
                 prop.InsertArrayElementAtIndex(list.index);
 
-                SerializedProperty element = prop.GetArrayElementAtIndex(list.index);
+                var element = prop.GetArrayElementAtIndex(list.index);
 
                 element.vector2Value = new Vector2(0f, 1f);
             };
 
             m_ranges.drawElementCallback = (rect, index, isActive, isFocused) =>
             {
-                SerializedProperty element = prop.GetArrayElementAtIndex(index);
+                var element = prop.GetArrayElementAtIndex(index);
 
-                Vector2 current = element.vector2Value;
+                var current = element.vector2Value;
 
                 float rectangleWidth = rect.width;
                 float rectangleXMin = rect.xMin;
@@ -136,7 +137,7 @@ namespace TLab.Spline.Editor
 
         protected virtual void DrawProperty(string name)
         {
-            SerializedProperty prop = serializedObject.FindProperty(name);
+            var prop = serializedObject.FindProperty(name);
 
             EditorGUILayout.PropertyField(prop);
         }

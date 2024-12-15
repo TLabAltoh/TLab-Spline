@@ -6,24 +6,51 @@ namespace TLab.Spline
 {
     public class Spline : MonoBehaviour
     {
+        [System.Serializable]
+        public class InitOption
+        {
+            public Primitive.PrimitiveType primitive;
+            [Min(0)] public float size = 1f;
+            [Min(2)] public int numSegments = 5;
+
+            public InitOption() { }
+
+            public InitOption(Primitive.PrimitiveType primitive, float size, int numSegments)
+            {
+                this.primitive = primitive;
+                this.size = size;
+                this.numSegments = numSegments;
+            }
+        }
+
         [SerializeField, HideInInspector] private List<Vector3> m_points;
+        [SerializeField, HideInInspector] private List<float> m_angles;
+
         [SerializeField, HideInInspector] private bool m_close;
-        [SerializeField, HideInInspector] private EditMode m_editMode = EditMode.Default;
+        [SerializeField, HideInInspector] private EditMode m_editMode = EditMode.Free;
 
         public enum EditMode
         {
-            Default,
+            Free,
             Tangent,
             AutoSetControlPoints,
         }
 
-        public string THIS_NAME => "[" + this.GetType() + "] ";
+        public enum AnchorAxis
+        {
+            Default,
+            Transform,
+        };
 
-        public Vector3 this[int i] => m_points[i];
+        public string THIS_NAME => "[" + this.GetType() + "] ";
 
         public int numPoints => m_points.Count;
 
-        public int numSegments => m_points.Count / 3;
+        public int numAngles => m_angles.Count;
+
+        public int numSegments => numPoints / 3;
+
+        public int numAnglesFoAllocation => (numPoints + (m_close ? 0 : 2)) / 3;
 
         public bool close
         {
@@ -36,10 +63,10 @@ namespace TLab.Spline
 
                     if (m_close)
                     {
-                        if (m_points.Count % 3 != 0)
+                        if (numPoints % 3 != 0)
                         {
                             // anchor point added at the path end
-                            m_points.Add(m_points[m_points.Count - 1] * 2 - m_points[m_points.Count - 2]);
+                            m_points.Add(m_points[numPoints - 1] * 2 - m_points[numPoints - 2]);
 
                             // add anchor point at the path beginning
                             m_points.Add(m_points[0] * 2 - m_points[1]);
@@ -48,15 +75,15 @@ namespace TLab.Spline
                         if (m_editMode == EditMode.AutoSetControlPoints)
                         {
                             AutoSetAnchorControlPoints(0);
-                            AutoSetAnchorControlPoints(m_points.Count - 3);
+                            AutoSetAnchorControlPoints(numPoints - 3);
                         }
                     }
                     else
                     {
-                        if (m_points.Count % 3 == 0)
+                        if (numPoints % 3 == 0)
                         {
                             // remove anchor point at path end and begining.
-                            m_points.RemoveRange(m_points.Count - 2, 2);
+                            m_points.RemoveRange(numPoints - 2, 2);
                         }
 
                         if (m_editMode == EditMode.AutoSetControlPoints)
@@ -81,33 +108,102 @@ namespace TLab.Spline
             }
         }
 
-        public void Init(Primitive.PrimitiveType primitiveType, int numSegments, float size = 1.0f)
+        public void Init(InitOption init)
         {
-            switch (primitiveType)
+            switch (init.primitive)
             {
                 case Primitive.PrimitiveType.Line:
                     m_close = false;
-                    m_points = Primitive.Line(numSegments, size).ToList();
+                    m_points = Primitive.Line(init.numSegments, init.size).ToList();
                     break;
                 case Primitive.PrimitiveType.Circle:
                     m_close = true;
-                    m_points = Primitive.Circle(numSegments, size * 0.5f).ToList();
+                    m_points = Primitive.Circle(init.numSegments, init.size * 0.5f).ToList();
                     break;
                 case Primitive.PrimitiveType.Polygon:
                     m_close = true;
-                    m_points = Primitive.Polygon(numSegments, size * 0.5f).ToList();
+                    m_points = Primitive.Polygon(init.numSegments, init.size * 0.5f).ToList();
                     break;
             }
+
+            m_angles = new List<float>(new float[numAnglesFoAllocation]);
+        }
+
+        public void Init(List<Vector3> points, bool close)
+        {
+            m_points = new List<Vector3>(points);
+            m_angles = new List<float>(new float[numAnglesFoAllocation]);
+
+            m_close = close;
+        }
+
+        public void Init(List<Vector3> points, List<float> angles, bool close)
+        {
+            m_points = new List<Vector3>(points);
+            m_angles = new List<float>(angles);
+
+            this.close = close;
         }
 
         public void Init(Spline path)
         {
             m_points = new List<Vector3>(path.m_points);
-            m_close = path.m_close;
+            m_angles = new List<float>(path.m_angles);
             m_editMode = path.m_editMode;
+
+            this.close = path.m_close;
         }
 
-        public void AddSegment(Vector3 anchorPos)
+        private int LoopIndexPoint(int i) => (i + numPoints) % numPoints;
+        private int LoopIndexAngle(int i) => (i + numAngles) % numAngles;
+
+        private Vector3 Local2World(Vector3 localPos)
+        {
+            var lossyScale = this.transform.lossyScale;
+            var scaledLocalPos = localPos;
+            scaledLocalPos.x *= lossyScale.x;
+            scaledLocalPos.y *= lossyScale.y;
+            scaledLocalPos.z *= lossyScale.z;
+            return this.transform.TransformPoint(scaledLocalPos);
+        }
+
+        private Vector3 Local2WorldScale(Vector3 localPos)
+        {
+            var lossyScale = this.transform.lossyScale;
+            var scaledLocalPos = localPos;
+            scaledLocalPos.x *= lossyScale.x;
+            scaledLocalPos.y *= lossyScale.y;
+            scaledLocalPos.z *= lossyScale.z;
+            return scaledLocalPos;
+        }
+
+        private Vector3 World2Local(Vector3 worldPos)
+        {
+            var lossyScale = this.transform.lossyScale;
+            var scaledLocalPos = this.transform.InverseTransformPoint(worldPos);
+            scaledLocalPos.x /= lossyScale.x;
+            scaledLocalPos.y /= lossyScale.y;
+            scaledLocalPos.z /= lossyScale.z;
+            var localPos = scaledLocalPos;
+            return localPos;
+        }
+
+        public float GetAngle(int i) => m_angles[i];
+
+        public Vector3 GetPoint(int i) => Local2World(m_points[i]);
+
+        public Vector3[] GetPointInSegment(int i)
+        {
+            return new Vector3[]
+            {
+                GetPoint(i * 3 + 0),
+                GetPoint(i * 3 + 1),
+                GetPoint(i * 3 + 2),
+                GetPoint(LoopIndexPoint(i * 3 + 3))
+            };
+        }
+
+        public void AddSegment(Vector3 newAnchorPos)
         {
             /*
              * start, backward;
@@ -117,17 +213,32 @@ namespace TLab.Spline
              *         = start * 2 - backward;
              */
 
-            m_points.Add(m_points[m_points.Count - 1] * 2 - m_points[m_points.Count - 2]);
-            m_points.Add((m_points[m_points.Count - 1] + anchorPos) * 0.5f);
-            m_points.Add(anchorPos);
+            newAnchorPos = World2Local(newAnchorPos);
+
+            var point0 = m_points[numPoints - 1];
+            var point1 = m_points[numPoints - 2];
+            var control0 = point0 * 2 - point1;
+            var control1 = 0.5f * (control0 + newAnchorPos);
+
+            m_points.Add(control0);
+            m_points.Add(control1);
+            m_points.Add(newAnchorPos);
+
+            var angle0 = m_angles[numAngles - 1];
+            var angle1 = m_angles[numAngles - 2];
+            var angle2 = angle0 * 2 - angle1;
+
+            m_angles.Add(angle2);
 
             if (m_editMode == EditMode.AutoSetControlPoints)
-                AutoSetAllAffectedControlPoints(m_points.Count - 1);
+                AutoSetAllAffectedControlPoints(numPoints - 1);
         }
 
-        public void SplitSegment(Vector3 anchorPos, int segmentIndex)
+        public void SplitSegment(Vector3 newAnchorPos, int segmentIndex)
         {
-            m_points.InsertRange(segmentIndex * 3 + 2, new Vector3[] { Vector3.zero, anchorPos, Vector3.zero });
+            m_points.InsertRange(segmentIndex * 3 + 2, new Vector3[] { Vector3.zero, World2Local(newAnchorPos), Vector3.zero });
+
+            m_angles.Insert(segmentIndex + 1, m_angles[segmentIndex] * 2 - m_angles[segmentIndex + 1]);
 
             if (m_editMode == EditMode.AutoSetControlPoints)
                 AutoSetAllAffectedControlPoints(segmentIndex * 3 + 3);
@@ -143,11 +254,11 @@ namespace TLab.Spline
                 {
                     if (m_close)
                     {
-                        m_points[m_points.Count - 1] = m_points[2];
+                        m_points[numPoints - 1] = m_points[2];
                         m_points.RemoveRange(0, 3);
                     }
                 }
-                else if (anchorIndex == m_points.Count - 1 && !m_close)
+                else if (anchorIndex == numPoints - 1 && !m_close)
                     m_points.RemoveRange(anchorIndex - 2, 3);
                 else
                     m_points.RemoveRange(anchorIndex - 1, 3);
@@ -157,19 +268,15 @@ namespace TLab.Spline
                 AutoSetAllAffectedControlPoints(anchorIndex);
         }
 
-        public Vector3[] GetPointInSegment(int i)
+        public void RotateAngle(int i, float angle)
         {
-            return new Vector3[]
-            {
-                m_points[i * 3 + 0],
-                m_points[i * 3 + 1],
-                m_points[i * 3 + 2],
-                m_points[LoopIndex(i * 3 + 3)]
-            };
+            m_angles[i] = angle;
         }
 
         public void MovePoint(int i, Vector3 pos)
         {
+            pos = World2Local(pos);
+
             if (i % 3 == 0 || !(m_editMode == EditMode.AutoSetControlPoints))
             {
                 var deltaMove = pos - m_points[i];
@@ -184,11 +291,11 @@ namespace TLab.Spline
                     {
                         // if is this path point, move anchor m_points with same offset.
 
-                        if (i + 1 < m_points.Count || m_close)
-                            m_points[LoopIndex(i + 1)] += deltaMove;
+                        if (i + 1 < numPoints || m_close)
+                            m_points[LoopIndexPoint(i + 1)] += deltaMove;
 
                         if (i - 1 > -1 || m_close)
-                            m_points[LoopIndex(i - 1)] += deltaMove;
+                            m_points[LoopIndexPoint(i - 1)] += deltaMove;
                     }
                     else
                     {
@@ -211,11 +318,11 @@ namespace TLab.Spline
                             var correspondingControlIndex = nextPointIsAnchor ? i + 2 : i - 2;
                             var anchorIndex = nextPointIsAnchor ? i + 1 : i - 1;
 
-                            if (correspondingControlIndex > -1 && correspondingControlIndex < m_points.Count || m_close)
+                            if (correspondingControlIndex > -1 && correspondingControlIndex < numPoints || m_close)
                             {
-                                var dst = (m_points[LoopIndex(anchorIndex)] - m_points[LoopIndex(correspondingControlIndex)]).magnitude;
-                                var dir = (m_points[LoopIndex(anchorIndex)] - pos).normalized;
-                                m_points[LoopIndex(correspondingControlIndex)] = m_points[LoopIndex(anchorIndex)] + dir * dst;
+                                var dst = (m_points[LoopIndexPoint(anchorIndex)] - m_points[LoopIndexPoint(correspondingControlIndex)]).magnitude;
+                                var dir = (m_points[LoopIndexPoint(anchorIndex)] - pos).normalized;
+                                m_points[LoopIndexPoint(correspondingControlIndex)] = m_points[LoopIndexPoint(anchorIndex)] + dir * dst;
                             }
                         }
                     }
@@ -223,31 +330,38 @@ namespace TLab.Spline
             }
         }
 
-        private int LoopIndex(int i) => (i + m_points.Count) % m_points.Count;
-
-        public bool CalculateEvenlySpacedPoints(out Vector3[] spacedPoints, float spacing, float resolution = 1.0f)
+        public bool CalculateEvenlySpacedPointsAndAngles(out Vector3[] spacedPoints, out float[] spacedAngles, float spacing, float resolution = 1.0f)
         {
-            if (m_points.Count <= 0)
+            if (numPoints <= 0)
             {
-                Debug.LogError(THIS_NAME + $"Point's Length is {m_points.Count}");
+                Debug.LogWarning(THIS_NAME + $"Point's Length is {numPoints}");
 
                 spacedPoints = new Vector3[1];
+                spacedAngles = new float[1];
 
                 return false;
             }
 
-            var evenlySpacedPoints = new List<Vector3>();
-            evenlySpacedPoints.Add(transform.position + m_points[0]);
-            var previousPoint = m_points[0];
+            var previousPoint = Local2World(m_points[0]);
+            var previousAngle = m_angles[0];
+
+            var evenlySpacedPoints = new List<Vector3>() { previousPoint };
+            var evenlySpacedAngles = new List<float> { previousAngle };
+
             var dstSinceLastEvenPoint = 0.0f;
 
             for (int segmentIndex = 0; segmentIndex < numSegments; segmentIndex++)
             {
                 var p = GetPointInSegment(segmentIndex);
 
+                var previousPointInSegment = p[0];
+
                 var controlNetLength = Vector3.Distance(p[0], p[1]) + Vector3.Distance(p[1], p[2]) + Vector3.Distance(p[2], p[3]);
                 var estimatedCurveLength = Vector3.Distance(p[0], p[3]) + controlNetLength / 2.0f;
                 var divisions = Mathf.CeilToInt(estimatedCurveLength * resolution * 10);
+
+                var pointStartIndexInSegment = evenlySpacedPoints.Count - 1;
+                var segmentLineLength = 0f;
 
                 var t = 0.0f;
 
@@ -261,73 +375,121 @@ namespace TLab.Spline
                     {
                         var overshootDst = dstSinceLastEvenPoint - spacing;
                         var newEvenlySpacedPoint = pointOnCurve + (previousPoint - pointOnCurve).normalized * overshootDst;
-                        evenlySpacedPoints.Add(transform.position + newEvenlySpacedPoint);
+
+                        evenlySpacedPoints.Add(newEvenlySpacedPoint);
+                        segmentLineLength += Vector3.Distance(newEvenlySpacedPoint, previousPointInSegment);
+
                         dstSinceLastEvenPoint = overshootDst;
                         previousPoint = newEvenlySpacedPoint;
+                        previousPointInSegment = newEvenlySpacedPoint;
                     }
 
                     previousPoint = pointOnCurve;
                 }
+
+                segmentLineLength += Vector3.Distance(previousPointInSegment, p[3]);
+
+                var dstAngle = GetAngle(LoopIndexAngle(segmentIndex + 1));
+                var deltaAngle = (dstAngle - previousAngle);
+
+                var newEvenlySpacedAngle = previousAngle;
+
+                previousPointInSegment = p[0];
+
+                for (int i = pointStartIndexInSegment + 1; i < evenlySpacedPoints.Count; i++)
+                {
+                    newEvenlySpacedAngle += deltaAngle * (Vector3.Distance(previousPointInSegment, evenlySpacedPoints[i]) / segmentLineLength);
+
+                    previousPointInSegment = evenlySpacedPoints[i];
+
+                    evenlySpacedAngles.Add(newEvenlySpacedAngle);
+                }
+
+                previousAngle = dstAngle;
             }
 
             spacedPoints = evenlySpacedPoints.ToArray();
+            spacedAngles = evenlySpacedAngles.ToArray();
 
             return true;
         }
 
         public struct Point
         {
-            public Vector3 forward;
+            public Vector3 tangent;
             public Vector3 up;
+            public Vector3 normal;
             public Vector3 position;
         }
 
-        public bool GetSplinePoints(out Point[] splinePoints, bool zUp, float spacing, float resolution = 1.0f)
+        public bool GetSplinePoints(out Point[] splinePoints, AnchorAxis anchorAxis, bool zUp, float spacing, float resolution = 1.0f)
         {
             var splinePointList = new List<Point>();
             splinePoints = null;
 
-            if (CalculateEvenlySpacedPoints(out Vector3[] spacedPoints, spacing, resolution))
+            if (CalculateEvenlySpacedPointsAndAngles(out Vector3[] spacedPoints, out float[] spacedAngles, spacing, resolution))
             {
-                Vector3 prevLocalForward = spacedPoints[1 % spacedPoints.Length] - spacedPoints[0], prevLocalUp = Vector3.up;
-                prevLocalForward.Normalize();
+                var prevRotationAxis = anchorAxis == AnchorAxis.Default ? Vector3.up : transform.up;
 
-                for (int i = 0; i < spacedPoints.Length; i++)
+                var tangent = (m_close ? (spacedPoints[1] - spacedPoints[0]) + (spacedPoints[0] - spacedPoints.Last()) : spacedPoints[1] - spacedPoints[0]).normalized;
+                var normal = Vector3.Cross(prevRotationAxis, tangent).normalized;
+
+                var prevTangent = tangent;
+
+                normal = Quaternion.AngleAxis(spacedAngles[0], tangent) * normal;
+
+                var up = Vector3.Cross(tangent, normal);
+
+                splinePointList.Add(new Point
+                {
+                    tangent = tangent,
+                    up = up,
+                    normal = normal,
+                    position = spacedPoints[0],
+                });
+
+                for (int i = 1; i < spacedPoints.Length; i++)
                 {
                     var pos0 = spacedPoints[(i - 1 + spacedPoints.Length) % spacedPoints.Length];
                     var pos1 = spacedPoints[i];
                     var pos2 = spacedPoints[(i + 1) % spacedPoints.Length];
 
-                    var offset = Vector3.zero;
+                    var forward = pos1 - pos0; // Neighboring backward
 
                     if (i < spacedPoints.Length - 1 || m_close)  // Neighboring forward
-                        offset += pos2 - pos1;
+                        forward += pos2 - pos1;
 
-                    if (i > 0 || m_close)  // Neighboring backward
-                        offset += pos1 - pos0;
+                    tangent = forward.normalized;
 
-                    var sqrDst = offset.sqrMagnitude;
-
-                    var localForward = offset.normalized;
-                    var localUp = Vector3.up;
+                    normal = Vector3.Cross(Vector3.up, tangent).normalized;
 
                     if (!zUp)
                     {
-                        var rot = prevLocalUp - offset * 2 / sqrDst * Vector3.Dot(offset, prevLocalUp);
-                        var tan = prevLocalForward - offset * 2 / sqrDst * Vector3.Dot(offset, prevLocalForward);
-                        var v2 = localForward - tan;
+                        var offset = pos2 - pos1;
+                        var sqrDst = offset.sqrMagnitude;
+
+                        var r = prevRotationAxis - offset * 2 / sqrDst * Vector3.Dot(offset, prevRotationAxis);
+                        var t = prevTangent - offset * 2 / sqrDst * Vector3.Dot(offset, prevTangent);
+                        var v2 = tangent - t;
                         var c2 = Vector3.Dot(v2, v2);
 
-                        localUp = rot - v2 * 2 / c2 * Vector3.Dot(v2, rot);
+                        var rotationAxis = r - v2 * 2 / c2 * Vector3.Dot(v2, r);
+                        prevRotationAxis = rotationAxis;
+
+                        normal = Vector3.Cross(rotationAxis, tangent).normalized;
                     }
 
-                    prevLocalForward = localForward;
-                    prevLocalUp = localUp;
+                    prevTangent = tangent;
+
+                    normal = Quaternion.AngleAxis(spacedAngles[i], tangent) * normal;
+
+                    up = Vector3.Cross(tangent, normal);
 
                     splinePointList.Add(new Point
                     {
-                        forward = localForward,
-                        up = localUp,
+                        tangent = tangent,
+                        up = up,
+                        normal = normal,
                         position = pos1,
                     });
                 }
@@ -336,20 +498,19 @@ namespace TLab.Spline
 
                 if (m_close)
                 {
-                    var upAngleErrorAcrossjoin = Vector3.SignedAngle(splinePoints[splinePoints.Length - 1].up, splinePoints[0].up, splinePoints[0].forward);
-                    if (Mathf.Abs(upAngleErrorAcrossjoin) > 0.1f)
+                    var upAngleErrorAcrossjoin = Vector3.SignedAngle(splinePoints.Last().up, splinePoints[0].up, splinePoints[0].tangent);
+                    if (Mathf.Abs(upAngleErrorAcrossjoin) > 0.01f)
                     {
                         for (int i = 1; i < splinePoints.Length; i++)
                         {
-                            var t = (i / (splinePoints.Length - 1f));
+                            var t = (float)i / splinePoints.Length;
                             var angle = upAngleErrorAcrossjoin * t;
-                            var rot = Quaternion.AngleAxis(angle, splinePoints[i].forward);
-                            splinePoints[i] = new Point()
-                            {
-                                forward = splinePointList[i].forward,
-                                up = rot * splinePointList[i].up,
-                                position = splinePointList[i].position,
-                            };
+                            var rot = Quaternion.AngleAxis(angle, splinePoints[i].tangent);
+
+                            splinePoints[i].tangent = splinePointList[i].tangent;
+                            splinePoints[i].up = rot * splinePointList[i].up;
+                            splinePoints[i].normal = rot * splinePointList[i].normal;
+                            splinePoints[i].position = splinePointList[i].position;
                         }
                     }
                 }
@@ -364,14 +525,14 @@ namespace TLab.Spline
         {
             for (int i = updateAnchorIndex - 3; i < updateAnchorIndex + 4; i += 3)
             {
-                if (i > -1 && i < m_points.Count || m_close)
-                    AutoSetAnchorControlPoints(LoopIndex(i));
+                if (i > -1 && i < numPoints || m_close)
+                    AutoSetAnchorControlPoints(LoopIndexPoint(i));
             }
         }
 
         private void AutoSetAllControlPoints()
         {
-            for (int i = 0; i < m_points.Count; i += 3)
+            for (int i = 0; i < numPoints; i += 3)
                 AutoSetAnchorControlPoints(i);
         }
 
@@ -392,15 +553,15 @@ namespace TLab.Spline
             // if neighbour exist or close enabled
             if (anchorIndex - 3 > -1 || m_close)
             {
-                var offset = m_points[LoopIndex(anchorIndex - 3)] - anchorPos;
+                var offset = m_points[LoopIndexPoint(anchorIndex - 3)] - anchorPos;
                 dir += offset.normalized;
                 neighbourDistance[0] = offset.magnitude;
             }
 
             // if neighbour exist or close enabled
-            if (anchorIndex + 3 < m_points.Count || m_close)
+            if (anchorIndex + 3 < numPoints || m_close)
             {
-                var offset = m_points[LoopIndex(anchorIndex + 3)] - anchorPos;
+                var offset = m_points[LoopIndexPoint(anchorIndex + 3)] - anchorPos;
                 dir -= offset.normalized;
                 neighbourDistance[1] = -offset.magnitude;
             }
@@ -411,8 +572,8 @@ namespace TLab.Spline
             {
                 var controlIndex = anchorIndex + i * 2 - 1;
 
-                if (controlIndex > -1 && controlIndex < m_points.Count || m_close)
-                    m_points[LoopIndex(controlIndex)] = anchorPos + dir * neighbourDistance[i] * 0.5f;
+                if (controlIndex > -1 && controlIndex < numPoints || m_close)
+                    m_points[LoopIndexPoint(controlIndex)] = anchorPos + dir * neighbourDistance[i] * 0.5f;
             }
         }
 
@@ -436,11 +597,17 @@ namespace TLab.Spline
              *     
              * l-4                   l-1
              * 
-             * l = m_points.count
+             * l = numPoints
              */
 
             m_points[1] = (m_points[0] + m_points[3]) * 0.5f;
-            m_points[m_points.Count - 2] = (m_points[m_points.Count - 1] + m_points[m_points.Count - 4]) * 0.5f;
+            m_points[numPoints - 2] = (m_points[numPoints - 1] + m_points[numPoints - 4]) * 0.5f;
+        }
+
+        private void OnEnable()
+        {
+            if (m_angles.Count != numAnglesFoAllocation)
+                m_angles = new List<float>(new float[numAnglesFoAllocation]);
         }
     }
 }

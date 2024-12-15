@@ -30,23 +30,57 @@ namespace TLab.Spline
             }
         }
 
+        [System.Serializable]
+        public class ArcHandleSettings
+        {
+            public Color color;
+            public float radius;
+
+            public ArcHandleSettings() { }
+
+            public ArcHandleSettings(Color color, float radius)
+            {
+                this.color = color;
+                this.radius = radius;
+            }
+
+            public ArcHandleSettings(Color color, float alpha, float radius)
+            {
+                this.color = new Color(color.r, color.g, color.b, alpha);
+                this.radius = radius;
+            }
+        }
+
+        [System.Serializable]
+        public class DisplaySetting
+        {
+            public Color segmentColor = Color.green;
+            public bool anchor = true;
+            public bool control = true;
+            public bool angle = true;
+
+            public DisplaySetting() { }
+
+            public DisplaySetting(Color segmentColor, bool anchor, bool control, bool angle)
+            {
+                this.segmentColor = segmentColor;
+                this.anchor = anchor;
+                this.control = control;
+                this.angle = angle;
+            }
+        }
+
         public HandleSettings anchor = new HandleSettings(Color.red, 1.5f, HandleType.Position);
         public HandleSettings control = new HandleSettings(Color.white, 1.5f, HandleType.FreeMove);
+        public ArcHandleSettings angle = new ArcHandleSettings(Color.yellow, 0.1f, 1.5f);
 
-        [Header("Options")]
-        public bool displayAnchorPoints = true;
-        public bool displayControlPoints = true;
-        public Color segmentColor = Color.green;
-
-        [Header("Create New Options")]
-        public Primitive.PrimitiveType initPrimitiveType;
-        [Min(0)] public float initSize = 1f;
-        [Min(2)] public int initSegmentNum = 5;
+        public DisplaySetting displaySetting = new DisplaySetting();
+        public Spline.InitOption initOption = new Spline.InitOption();
 
         public void CreatePath()
         {
             spline = GetComponent<Spline>();
-            spline.Init(initPrimitiveType, initSegmentNum, initSize);
+            spline.Init(initOption);
         }
 
         private void Reset()
