@@ -23,7 +23,8 @@ namespace TLab.Spline.Editor
 
             if (GUILayout.Button("Create New"))
             {
-                Undo.RecordObject(m_instance, "Create New");
+                var spline = m_instance.GetComponent<Spline>();
+                Undo.RecordObject(spline, "Create New");
                 m_instance.CreatePath();
             }
 
