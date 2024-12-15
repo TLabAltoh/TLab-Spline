@@ -55,7 +55,7 @@ namespace TLab.Spline
                 return;
             }
 
-            if (GeneratePlaneAlongToSpline(m_zUp, m_spacing, m_arrayMode, out var splinePoints, out var verts, out var uvs, out var tris))
+            if (GeneratePlaneAlongToSpline(m_anchorAxis, m_zUp, m_spacing, m_arrayMode, out var splinePoints, out var verts, out var uvs, out var tris))
             {
                 var planeList = new List<Plane>();
 
