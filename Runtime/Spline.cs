@@ -38,8 +38,8 @@ namespace TLab.Spline
 
         public enum AnchorAxis
         {
-            Default,
-            Transform,
+            World,
+            Local,
         };
 
         public string THIS_NAME => "[" + this.GetType() + "] ";
@@ -429,7 +429,7 @@ namespace TLab.Spline
 
             if (CalculateEvenlySpacedPointsAndAngles(out Vector3[] spacedPoints, out float[] spacedAngles, spacing, resolution))
             {
-                var prevRotationAxis = anchorAxis == AnchorAxis.Default ? Vector3.up : transform.up;
+                var prevRotationAxis = anchorAxis == AnchorAxis.World ? Vector3.up : transform.up;
 
                 var tangent = (m_close ? (spacedPoints[1] - spacedPoints[0]) + (spacedPoints[0] - spacedPoints.Last()) : spacedPoints[1] - spacedPoints[0]).normalized;
                 var normal = Vector3.Cross(prevRotationAxis, tangent).normalized;
