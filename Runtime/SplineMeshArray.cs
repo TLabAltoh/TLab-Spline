@@ -134,7 +134,7 @@ namespace TLab.Spline
 
         private IEnumerator<Mesh> CreateArrayMeshTask()
         {
-            if (GeneratePlaneAlongToSpline(m_anchorAxis, m_zUp, m_spacing, m_arrayMode, out var splinePoints, out var planeVerts, out var planeUVs, out var planeTris))
+            if (GeneratePlaneAlongToSpline(m_anchorAxis, m_zUp, m_flipNormal, m_flipUp, m_flipTangent, m_spacing, m_arrayMode, out var splinePoints, out var planeVerts, out var planeUVs, out var planeTris))
             {
                 m_element.GetMesh(out var srcMesh);
                 m_element.GetBounds(out var bounds);

@@ -14,6 +14,9 @@ namespace TLab.Spline
         [SerializeField] protected Spline.AnchorAxis m_anchorAxis;
         [SerializeField] protected bool m_zUp = true;
         [SerializeField] protected uint m_skip = 0;
+        [SerializeField] protected bool m_flipNormal = false;
+        [SerializeField] protected bool m_flipUp = false;
+        [SerializeField] protected bool m_flipTangent = false;
         [SerializeField, Min(0)] protected float m_spacing = 0.5f;
         [SerializeField] protected float m_slideOffset = 0f;
         [SerializeField] protected Vector3 m_scale = new Vector3(1.0f, 1.0f, 1.0f);
@@ -69,6 +72,48 @@ namespace TLab.Spline
                 if (m_skip != value)
                 {
                     m_skip = value;
+
+                    RequestAutoUpdate();
+                }
+            }
+        }
+
+        public bool flipNormal
+        {
+            get => m_flipNormal;
+            set
+            {
+                if (m_flipNormal != value)
+                {
+                    m_flipNormal = value;
+
+                    RequestAutoUpdate();
+                }
+            }
+        }
+
+        public bool flipUp
+        {
+            get => m_flipUp;
+            set
+            {
+                if (m_flipUp != value)
+                {
+                    m_flipUp = value;
+
+                    RequestAutoUpdate();
+                }
+            }
+        }
+
+        public bool flipTangent
+        {
+            get => m_flipTangent;
+            set
+            {
+                if (m_flipTangent != value)
+                {
+                    m_flipTangent = value;
 
                     RequestAutoUpdate();
                 }
@@ -148,10 +193,25 @@ namespace TLab.Spline
             public Vector3 position;
         }
 
-        public virtual void InstantiateAlongToSpline(Spline.AnchorAxis anchorAxis, bool zUp, uint skip, Vector2[] ranges, float spacing, List<GameObject> items)
+        public virtual void InstantiateAlongToSpline(Spline.AnchorAxis anchorAxis, bool zUp, bool flipNormal, bool flipUp, bool flipTangent, uint skip, Vector2[] ranges, float spacing, List<GameObject> items)
         {
             if (m_spline.GetSplinePoints(out var splinePoints, anchorAxis, zUp, spacing))
             {
+                if (flipNormal || flipUp || flipTangent)
+                {
+                    var flipX = m_flipNormal ? -1 : 1;
+                    var flipY = m_flipUp ? -1 : 1;
+                    var flipZ = m_flipTangent ? -1 : 1;
+                    for (int i = 0; i < splinePoints.Length; i++)
+                    {
+                        var point = splinePoints[i];
+                        point.normal *= flipX;
+                        point.up *= flipY;
+                        point.tangent *= flipZ;
+                        splinePoints[i] = point;
+                    }
+                }
+
                 foreach (var range in ranges)
                 {
                     for (int i = (int)(range.x * splinePoints.Length); i < (int)(range.y * splinePoints.Length); i += (1 + (int)skip))
@@ -211,7 +271,7 @@ namespace TLab.Spline
                 return;
             }
 
-            InstantiateAlongToSpline(m_anchorAxis, m_zUp, m_skip, m_ranges, m_spacing, m_items);
+            InstantiateAlongToSpline(m_anchorAxis, m_zUp, m_flipNormal, m_flipUp, m_flipTangent, m_skip, m_ranges, m_spacing, m_items);
         }
     }
 }
