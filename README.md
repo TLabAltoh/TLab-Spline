@@ -7,7 +7,7 @@ Spline tool for unity.
 - Edit terrain height along to spline curve
 - Apply GameObject's Transform to Curve
 - Angle offset for each anchor point
-- Curve Primitive with custom dimension (Line, Circle, Polygon)
+- Curve Primitive with custom divisions (Line, Circle, Polygon)
 
 <img src="Media/image.png" width="512"></img>
 
