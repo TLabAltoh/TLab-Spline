@@ -62,7 +62,7 @@ https://github.com/TLabAltoh/TLab-Spline.git#upm
 | S | Insert segment |
 
 ### TODO
-- support Undo for ```SplineMeshArray```'s Editor GUI Button Action
+- support Undo for Editor GUI button action.
 
 ### Reference
 #### Source Code
