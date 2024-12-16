@@ -7,7 +7,6 @@ Spline tool for unity.
 - Edit terrain height along to spline curve
 - Apply GameObject's Transform to Curve
 - Angle offset for each anchor point
-- Flip Normal/Up/Tangent (X/Y/Z)
 - Specify the effective range of the curve (-1 ~ 1)
 - Multi range for one curve
 - Curve Primitive with custom divisions (Line, Circle, Polygon)
@@ -62,7 +61,7 @@ https://github.com/TLabAltoh/TLab-Spline.git#upm
 | S | Insert segment |
 
 ### TODO
-- support Undo for Editor GUI button action.
+- support Undo for editor gui's button action.
 
 ### Reference
 #### Source Code

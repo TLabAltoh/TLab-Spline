@@ -14,9 +14,8 @@ namespace TLab.Spline
         [SerializeField] protected Spline.AnchorAxis m_anchorAxis;
         [SerializeField] protected bool m_zUp = true;
         [SerializeField] protected uint m_skip = 0;
-        [SerializeField] protected bool m_flipNormal = false;
-        [SerializeField] protected bool m_flipUp = false;
-        [SerializeField] protected bool m_flipTangent = false;
+        [SerializeField] protected bool m_flipY = false;
+        [SerializeField] protected bool m_flipZ = false;
         [SerializeField, Min(0)] protected float m_spacing = 0.5f;
         [SerializeField] protected float m_slideOffset = 0f;
         [SerializeField] protected Vector3 m_scale = new Vector3(1.0f, 1.0f, 1.0f);
@@ -44,6 +43,20 @@ namespace TLab.Spline
                 if (m_items != value)
                 {
                     m_items = value;
+
+                    RequestAutoUpdate();
+                }
+            }
+        }
+
+        public Spline.AnchorAxis anchorAxis
+        {
+            get => m_anchorAxis;
+            set
+            {
+                if (m_anchorAxis != value)
+                {
+                    m_anchorAxis = value;
 
                     RequestAutoUpdate();
                 }
@@ -78,42 +91,28 @@ namespace TLab.Spline
             }
         }
 
-        public bool flipNormal
+        public bool flipY
         {
-            get => m_flipNormal;
+            get => m_flipY;
             set
             {
-                if (m_flipNormal != value)
+                if (m_flipY != value)
                 {
-                    m_flipNormal = value;
+                    m_flipY = value;
 
                     RequestAutoUpdate();
                 }
             }
         }
 
-        public bool flipUp
+        public bool flipZ
         {
-            get => m_flipUp;
+            get => m_flipZ;
             set
             {
-                if (m_flipUp != value)
+                if (m_flipZ != value)
                 {
-                    m_flipUp = value;
-
-                    RequestAutoUpdate();
-                }
-            }
-        }
-
-        public bool flipTangent
-        {
-            get => m_flipTangent;
-            set
-            {
-                if (m_flipTangent != value)
-                {
-                    m_flipTangent = value;
+                    m_flipZ = value;
 
                     RequestAutoUpdate();
                 }
@@ -193,21 +192,19 @@ namespace TLab.Spline
             public Vector3 position;
         }
 
-        public virtual void InstantiateAlongToSpline(Spline.AnchorAxis anchorAxis, bool zUp, bool flipNormal, bool flipUp, bool flipTangent, uint skip, Vector2[] ranges, float spacing, List<GameObject> items)
+        public virtual void InstantiateAlongToSpline(Spline.AnchorAxis anchorAxis, bool zUp, bool flipY, bool flipZ, uint skip, Vector2[] ranges, float spacing, List<GameObject> items)
         {
             if (m_spline.GetSplinePoints(out var splinePoints, anchorAxis, zUp, spacing))
             {
-                if (flipNormal || flipUp || flipTangent)
+                if (flipY || flipZ)
                 {
-                    var flipX = m_flipNormal ? -1 : 1;
-                    var flipY = m_flipUp ? -1 : 1;
-                    var flipZ = m_flipTangent ? -1 : 1;
+                    var y = m_flipY ? -1 : 1;
+                    var z = m_flipZ ? -1 : 1;
                     for (int i = 0; i < splinePoints.Length; i++)
                     {
                         var point = splinePoints[i];
-                        point.normal *= flipX;
-                        point.up *= flipY;
-                        point.tangent *= flipZ;
+                        point.up *= y;
+                        point.tangent *= z;
                         splinePoints[i] = point;
                     }
                 }
@@ -271,7 +268,7 @@ namespace TLab.Spline
                 return;
             }
 
-            InstantiateAlongToSpline(m_anchorAxis, m_zUp, m_flipNormal, m_flipUp, m_flipTangent, m_skip, m_ranges, m_spacing, m_items);
+            InstantiateAlongToSpline(m_anchorAxis, m_zUp, m_flipY, m_flipZ, m_skip, m_ranges, m_spacing, m_items);
         }
     }
 }

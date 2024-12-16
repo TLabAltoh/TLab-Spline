@@ -36,11 +36,11 @@ namespace TLab.Spline.Editor
             DrawProperty(nameof(m_base.autoUpdate));
 
             DrawProperty("m_" + nameof(m_base.items));
+            DrawProperty("m_" + nameof(m_base.anchorAxis));
             DrawProperty("m_" + nameof(m_base.zUp));
 
-            DrawProperty("m_" + nameof(m_base.flipNormal));
-            DrawProperty("m_" + nameof(m_base.flipUp));
-            DrawProperty("m_" + nameof(m_base.flipTangent));
+            DrawProperty("m_" + nameof(m_base.flipY));
+            DrawProperty("m_" + nameof(m_base.flipZ));
 
             DrawProperty("m_" + nameof(m_base.skip));
             DrawProperty("m_" + nameof(m_base.spacing));
