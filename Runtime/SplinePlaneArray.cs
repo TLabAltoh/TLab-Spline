@@ -18,6 +18,9 @@ namespace TLab.Spline
         [SerializeField] protected Spline.AnchorAxis m_anchorAxis;
         [SerializeField] protected bool m_zUp = true;
         [SerializeField] protected uint m_skip = 0;
+        [SerializeField] protected bool m_flipNormal = false;
+        [SerializeField] protected bool m_flipUp = false;
+        [SerializeField] protected bool m_flipTangent = false;
         [SerializeField, Min(0.5f)] protected float m_spacing = 0.5f;
         [SerializeField] protected float m_slideOffset = 0f;
         [SerializeField] protected Vector3 m_size = new Vector3(1.0f, 1.0f, 1.0f);
@@ -114,6 +117,48 @@ namespace TLab.Spline
             }
         }
 
+        public bool flipNormal
+        {
+            get => m_flipNormal;
+            set
+            {
+                if (m_flipNormal != value)
+                {
+                    m_flipNormal = value;
+
+                    RequestAutoUpdate();
+                }
+            }
+        }
+
+        public bool flipUp
+        {
+            get => m_flipUp;
+            set
+            {
+                if (m_flipUp != value)
+                {
+                    m_flipUp = value;
+
+                    RequestAutoUpdate();
+                }
+            }
+        }
+
+        public bool flipTangent
+        {
+            get => m_flipTangent;
+            set
+            {
+                if (m_flipTangent != value)
+                {
+                    m_flipTangent = value;
+
+                    RequestAutoUpdate();
+                }
+            }
+        }
+
         public float spacing
         {
             get => m_spacing;
@@ -172,7 +217,7 @@ namespace TLab.Spline
 
         private string THIS_NAME => "[" + this.GetType() + "] ";
 
-        protected virtual bool GeneratePlaneAlongToSpline(Spline.AnchorAxis anchorAxis, bool zUp, float spacing, ArrayMode arrayMode, out Spline.Point[] splinePoints, out Vector3[] verts, out Vector2[] uvs, out int[] tris)
+        protected virtual bool GeneratePlaneAlongToSpline(Spline.AnchorAxis anchorAxis, bool zUp, bool flipNormal, bool flipUp, bool flipTangent, float spacing, ArrayMode arrayMode, out Spline.Point[] splinePoints, out Vector3[] verts, out Vector2[] uvs, out int[] tris)
         {
             verts = null;
             uvs = null;
@@ -180,6 +225,21 @@ namespace TLab.Spline
 
             if (m_spline.GetSplinePoints(out splinePoints, anchorAxis, zUp, spacing))
             {
+                if (flipNormal || flipUp || flipTangent)
+                {
+                    var flipX = m_flipNormal ? -1 : 1;
+                    var flipY = m_flipUp ? -1 : 1;
+                    var flipZ = m_flipTangent ? -1 : 1;
+                    for (int i = 0; i < splinePoints.Length; i++)
+                    {
+                        var point = splinePoints[i];
+                        point.normal *= flipX;
+                        point.up *= flipY;
+                        point.tangent *= flipZ;
+                        splinePoints[i] = point;
+                    }
+                }
+
                 switch (arrayMode)
                 {
                     case ArrayMode.NoSpace:
@@ -284,15 +344,10 @@ namespace TLab.Spline
         public virtual void RequestAutoUpdate()
         {
             if (autoUpdate)
-            {
                 Execute();
-            }
         }
 
-        public virtual void Execute()
-        {
-
-        }
+        public virtual void Execute() { }
 
 #if UNITY_EDITOR
         protected void OnDrawGizmos()
@@ -305,7 +360,7 @@ namespace TLab.Spline
 
             m_gizmoMat.SetColor(PROP_COLOR, gizmoSetting.color);
 
-            if (GeneratePlaneAlongToSpline(m_anchorAxis, m_zUp, m_spacing, m_arrayMode, out var splinePoints, out var verts, out var uvs, out var tris))
+            if (GeneratePlaneAlongToSpline(m_anchorAxis, m_zUp, m_flipNormal, m_flipUp, m_flipTangent, m_spacing, m_arrayMode, out var splinePoints, out var verts, out var uvs, out var tris))
             {
                 m_gizmoMat.SetPass(0);
 

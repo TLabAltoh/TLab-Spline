@@ -44,6 +44,10 @@ namespace TLab.Spline.Editor
 
             DrawProperty("m_" + nameof(m_base.zUp));
 
+            DrawProperty("m_" + nameof(m_base.flipNormal));
+            DrawProperty("m_" + nameof(m_base.flipUp));
+            DrawProperty("m_" + nameof(m_base.flipTangent));
+
             DrawProperty("m_" + nameof(m_base.skip));
             DrawProperty("m_" + nameof(m_base.spacing));
             DrawProperty("m_" + nameof(m_base.slideOffset));

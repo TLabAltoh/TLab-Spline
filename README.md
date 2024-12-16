@@ -7,11 +7,26 @@ Spline tool for unity.
 - Edit terrain height along to spline curve
 - Apply GameObject's Transform to Curve
 - Angle offset for each anchor point
+- Flip Normal/Up/Tangent (X/Y/Z)
+- Specify the effective range of the curve (-1 ~ 1)
+- Multi range for one curve
 - Curve Primitive with custom divisions (Line, Circle, Polygon)
 
 <img src="Media/image.png" width="512"></img>
 
 <video src="https://github.com/user-attachments/assets/72c5b4cd-9df2-45ba-9a7f-e09f46817fec"></video>
+
+<details><summary>components</summary>
+
+<img src="Media/spline-mesh-array.png" width="256"></img>
+
+<img src="Media/spline-edit-terrain-height.png" width="256"></img>
+
+<img src="Media/spline-instantiate.png" width="256"></img>
+
+<img src="Media/spline-creator.png" width="256"></img>
+
+</details>
 
 ## Development Environment
 - Unity: 2022.3.11f1 (URP)  

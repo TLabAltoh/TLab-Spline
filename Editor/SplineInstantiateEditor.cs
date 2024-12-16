@@ -23,9 +23,7 @@ namespace TLab.Spline.Editor
             var width = GUILayout.Width(Screen.width / 3);
 
             if (GUILayout.Button("Update", width))
-            {
                 m_base.UpdateWithCurrentSpline();
-            }
 
             EditorGUILayout.EndHorizontal();
         }
@@ -39,6 +37,10 @@ namespace TLab.Spline.Editor
 
             DrawProperty("m_" + nameof(m_base.items));
             DrawProperty("m_" + nameof(m_base.zUp));
+
+            DrawProperty("m_" + nameof(m_base.flipNormal));
+            DrawProperty("m_" + nameof(m_base.flipUp));
+            DrawProperty("m_" + nameof(m_base.flipTangent));
 
             DrawProperty("m_" + nameof(m_base.skip));
             DrawProperty("m_" + nameof(m_base.spacing));
@@ -74,16 +76,12 @@ namespace TLab.Spline.Editor
             if (!m_toggle)
             {
                 if (GUILayout.Button(EditorGUIUtility.TrIconContent("animationvisibilitytoggleon"), width))
-                {
                     m_toggle = true;
-                }
             }
             else
             {
                 if (GUILayout.Button(EditorGUIUtility.TrIconContent("animationvisibilitytoggleoff"), width))
-                {
                     m_toggle = false;
-                }
             }
 
             EditorGUILayout.EndHorizontal();
@@ -129,9 +127,7 @@ namespace TLab.Spline.Editor
             m_ranges.headerHeight = 0f;
 
             if (m_toggle)
-            {
                 m_ranges.DoLayoutList();
-            }
         }
 
         protected virtual void DrawProperty(string name)
@@ -141,9 +137,6 @@ namespace TLab.Spline.Editor
             EditorGUILayout.PropertyField(prop);
         }
 
-        protected virtual void OnEnable()
-        {
-            m_base = target as SplineInstantiate;
-        }
+        protected virtual void OnEnable() => m_base = target as SplineInstantiate;
     }
 }
